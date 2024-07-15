@@ -9,17 +9,10 @@ try:
 except ImportError:
     pass
 
-from crewai import Agent, Task, Crew
 from langchain_huggingface import HuggingFaceEndpoint
-from langchain.tools import Tool
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationChain
 from langchain_community.utilities import DuckDuckGoSearchAPIWrapper
-import pandas as pd
-import matplotlib.pyplot as plt
-import io
-import networkx as nx
-import seaborn as sns
-from sklearn.cluster import KMeans
-import numpy as np
 
 # Set up Hugging Face API token
 huggingface_token = st.secrets["HUGGINGFACEHUB_API_TOKEN"]
@@ -28,19 +21,12 @@ os.environ["HUGGINGFACEHUB_API_TOKEN"] = huggingface_token
 # Initialize the language model
 llm = HuggingFaceEndpoint(
     repo_id="google/flan-t5-large",
-    temperature=0.5,
+    temperature=0.7,
     model_kwargs={"max_length": 512}
 )
 
 # Initialize the search tool
 search = DuckDuckGoSearchAPIWrapper()
-search_tool = Tool(
-    name="Search",
-    func=search.run,
-    description="useful for when you need to answer questions about current events"
-)
-
-# ... [rest of your code remains the same]
 
 # Your CV information
 cv_info = """
@@ -58,161 +44,89 @@ Skills: Project Management, Data Science, Machine Learning, Logistics, Supply Ch
 Languages: German (native), English (fluent), Spanish (basic), Portuguese (basic)
 """
 
-# Custom tools
-def create_gantt_chart(project_tasks):
-    """Create a Gantt chart for project tasks."""
-    tasks = eval(project_tasks)
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.barh(range(len(tasks)), [task['duration'] for task in tasks], left=[task['start'] for task in tasks])
-    ax.set_yticks(range(len(tasks)))
-    ax.set_yticklabels([task['task'] for task in tasks])
-    ax.set_xlabel('Timeline')
-    ax.set_title('Project Gantt Chart')
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-    st.image(buf)
-    return "Gantt chart created and displayed."
+# Set up the conversation memory
+memory = ConversationBufferMemory(return_messages=True)
 
-def perform_data_analysis(data_description):
-    """Perform a simple data analysis and visualization."""
-    data = pd.DataFrame({
-        'Category': ['A', 'B', 'C', 'D'],
-        'Value': [4, 7, 2, 9]
-    })
-    fig, ax = plt.subplots()
-    data.plot(kind='bar', x='Category', y='Value', ax=ax)
-    ax.set_title('Data Analysis Result')
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-    st.image(buf)
-    return f"Data analysis performed on {data_description}. Bar chart created and displayed."
-
-def optimize_route(locations):
-    """Simulate route optimization for logistics."""
-    optimized_route = ['Start'] + sorted(eval(locations)) + ['End']
-    st.write(f"Optimized Route: {' -> '.join(optimized_route)}")
-    return f"Route optimized for locations: {locations}"
-
-def read_excel_file(file):
-    """Read an Excel file and return its contents as a DataFrame."""
-    try:
-        df = pd.read_excel(file)
-        return df.to_dict()
-    except Exception as e:
-        return f"Error reading file: {str(e)}"
-
-# Define tools
-gantt_tool = Tool(
-    name="Create Gantt Chart",
-    func=create_gantt_chart,
-    description="Create a Gantt chart for project tasks"
-)
-
-data_analysis_tool = Tool(
-    name="Perform Data Analysis",
-    func=perform_data_analysis,
-    description="Perform a simple data analysis and visualization"
-)
-
-route_optimization_tool = Tool(
-    name="Optimize Route",
-    func=optimize_route,
-    description="Simulate route optimization for logistics"
-)
-
-excel_tool = Tool(
-    name="Read Excel File",
-    func=read_excel_file,
-    description="Read an Excel file and return its contents"
-)
-
-# Define agents
-project_manager = Agent(
-    role='Project Manager',
-    goal='Manage projects and coordinate team efforts',
-    backstory=f"An experienced project manager with a background in: {cv_info}",
-    verbose=True,
+# Set up the conversation chain
+conversation = ConversationChain(
     llm=llm,
-    tools=[search_tool, gantt_tool, excel_tool]
-)
-
-data_scientist = Agent(
-    role='Data Scientist',
-    goal='Analyze data and implement machine learning solutions',
-    backstory=f"A skilled data scientist with experience in: {cv_info}",
-    verbose=True,
-    llm=llm,
-    tools=[search_tool, data_analysis_tool, excel_tool]
-)
-
-logistics_specialist = Agent(
-    role='Logistics Specialist',
-    goal='Optimize logistics processes and improve efficiency',
-    backstory=f"An expert in logistics with a history of: {cv_info}",
-    verbose=True,
-    llm=llm,
-    tools=[search_tool, route_optimization_tool, excel_tool]
+    memory=memory,
+    verbose=True
 )
 
 # Streamlit UI
-st.title("Interactive CV Experience with Dominik Späth")
-st.write("Ask questions or propose scenarios to interact with different aspects of Dominik's professional experience!")
+st.title("Dominik Späth's Interactive CV")
 
-# File upload
-uploaded_file = st.file_uploader("Upload an Excel file (optional)", type="xlsx")
+# Display profile picture
+profile_pic = st.sidebar.file_uploader("Upload a profile picture", type=["jpg", "png", "jpeg"])
+if profile_pic is not None:
+    st.sidebar.image(profile_pic, caption="Dominik Späth", use_column_width=True)
+else:
+    st.sidebar.write("No profile picture uploaded yet.")
 
-# User input
-user_input = st.text_input("Enter your question or scenario:")
+# Create tabs for different sections
+tab1, tab2, tab3, tab4 = st.tabs(["Chat with AI", "Project Management App", "Data Science App", "Logistics App"])
 
-if user_input:
-    # Create tasks based on user input
-    task1 = Task(
-        description=f"Respond to the user's input from a project management perspective: {user_input}",
-        agent=project_manager
-    )
+with tab1:
+    st.header("Chat with AI about Dominik's Experience")
+    st.write("Ask questions to learn more about Dominik's professional experience!")
 
-    task2 = Task(
-        description=f"Analyze the user's input from a data science perspective: {user_input}",
-        agent=data_scientist
-    )
+    # Initialize chat history
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
-    task3 = Task(
-        description=f"Consider the logistics implications of the user's input: {user_input}",
-        agent=logistics_specialist
-    )
+    # Display chat messages from history on rerun
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-    # Create and run the crew
-    crew = Crew(
-        agents=[project_manager, data_scientist, logistics_specialist],
-        tasks=[task1, task2, task3],
-        verbose=2
-    )
+    # React to user input
+    if prompt := st.chat_input("What would you like to know?"):
+        # Display user message in chat message container
+        st.chat_message("user").markdown(prompt)
+        # Add user message to chat history
+        st.session_state.messages.append({"role": "user", "content": prompt})
 
-    with st.spinner("Generating responses..."):
-        result = crew.kickoff()
+        with st.chat_message("assistant"):
+            full_response = conversation.predict(input=f"Based on this CV: {cv_info}\n\nUser question: {prompt}")
+            st.markdown(full_response)
+        
+        # Add assistant response to chat history
+        st.session_state.messages.append({"role": "assistant", "content": full_response})
 
-    # Display results
-    st.subheader("Responses:")
-    st.write(result)
+with tab2:
+    st.header("Project Management Application")
+    st.write("This application showcases Dominik's project management skills.")
+    st.info("Application under development. Check back soon for interactive project management tools!")
+    if st.button("Visit Project Management App"):
+        st.write("Redirecting to Project Management App...")
+        # In a real scenario, you would use st.markdown to create a hyperlink
+        # st.markdown("[Go to Project Management App](https://your-project-management-app-url)")
 
-# Test Hugging Face Model
-if st.button("Test Hugging Face Model"):
-    with st.spinner("Testing the model..."):
-        try:
-            response = llm("Translate the following English text to French: 'Hello, how are you?'")
-            st.success(f"Model response: {response}")
-        except Exception as e:
-            st.error(f"An error occurred: {str(e)}")
+with tab3:
+    st.header("Data Science Application")
+    st.write("This application demonstrates Dominik's data science and machine learning capabilities.")
+    st.info("Application under development. Check back soon for data analysis and ML demos!")
+    if st.button("Visit Data Science App"):
+        st.write("Redirecting to Data Science App...")
+        # st.markdown("[Go to Data Science App](https://your-data-science-app-url)")
+
+with tab4:
+    st.header("Logistics Application")
+    st.write("This application showcases Dominik's expertise in logistics and supply chain management.")
+    st.info("Application under development. Check back soon for supply chain optimization tools!")
+    if st.button("Visit Logistics App"):
+        st.write("Redirecting to Logistics App...")
+        # st.markdown("[Go to Logistics App](https://your-logistics-app-url)")
 
 # Add information about the app
 st.sidebar.title("About")
 st.sidebar.info(
-    "This app showcases Dominik Späth's skills in project management, data science, and logistics. "
-    "The AI agents can access the internet and use custom tools to demonstrate specific capabilities."
+    "This app provides an interactive experience to learn about Dominik Späth's professional skills and experience. "
+    "You can chat with an AI assistant about Dominik's CV and explore specialized applications showcasing his expertise in "
+    "project management, data science, and logistics."
 )
 st.sidebar.warning(
-    "Note: While the AI agents can search for current information and use custom tools, their core knowledge is based on the provided CV. "
-    "For the most accurate and current information about Dominik's experience, please contact him directly."
+    "Note: While the AI assistant can answer questions based on the provided CV, "
+    "for the most accurate and current information about Dominik's experience, please contact him directly."
 )

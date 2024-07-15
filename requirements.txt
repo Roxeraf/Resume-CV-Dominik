@@ -1,17 +1,7 @@
 streamlit
-crewai
 langchain
 langchain-community
 langchain-huggingface
 pandas
 matplotlib
 networkx
-seaborn
-scikit-learn
-numpy
-openpyxl
-duckduckgo-search
-python-dotenv
-transformers
-torch
-pysqlite3-binary
