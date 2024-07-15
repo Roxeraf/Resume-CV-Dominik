@@ -11,9 +11,8 @@ except ImportError:
 
 from crewai import Agent, Task, Crew
 from langchain_huggingface import HuggingFaceEndpoint
-from langchain_community.tools import DuckDuckGoSearchRun
-from langchain_community.tools.base import Tool
-from langchain.agents import tool
+from langchain.tools import Tool
+from langchain.utilities import DuckDuckGoSearchAPIWrapper
 import pandas as pd
 import matplotlib.pyplot as plt
 import io
@@ -30,7 +29,12 @@ os.environ["HUGGINGFACEHUB_API_TOKEN"] = huggingface_token
 llm = HuggingFaceEndpoint(repo_id="google/flan-t5-large", model_kwargs={"temperature": 0.5, "max_length": 512})
 
 # Initialize the search tool
-search_tool = DuckDuckGoSearchRun()
+search = DuckDuckGoSearchAPIWrapper()
+search_tool = Tool(
+    name="Search",
+    func=search.run,
+    description="useful for when you need to answer questions about current events"
+)
 
 # Your CV information
 cv_info = """
@@ -49,7 +53,6 @@ Languages: German (native), English (fluent), Spanish (basic), Portuguese (basic
 """
 
 # Custom tools
-@tool
 def create_gantt_chart(project_tasks):
     """Create a Gantt chart for project tasks."""
     tasks = eval(project_tasks)
@@ -65,7 +68,6 @@ def create_gantt_chart(project_tasks):
     st.image(buf)
     return "Gantt chart created and displayed."
 
-@tool
 def perform_data_analysis(data_description):
     """Perform a simple data analysis and visualization."""
     data = pd.DataFrame({
@@ -81,14 +83,12 @@ def perform_data_analysis(data_description):
     st.image(buf)
     return f"Data analysis performed on {data_description}. Bar chart created and displayed."
 
-@tool
 def optimize_route(locations):
     """Simulate route optimization for logistics."""
     optimized_route = ['Start'] + sorted(eval(locations)) + ['End']
     st.write(f"Optimized Route: {' -> '.join(optimized_route)}")
     return f"Route optimized for locations: {locations}"
 
-@tool
 def read_excel_file(file):
     """Read an Excel file and return its contents as a DataFrame."""
     try:
@@ -97,6 +97,31 @@ def read_excel_file(file):
     except Exception as e:
         return f"Error reading file: {str(e)}"
 
+# Define tools
+gantt_tool = Tool(
+    name="Create Gantt Chart",
+    func=create_gantt_chart,
+    description="Create a Gantt chart for project tasks"
+)
+
+data_analysis_tool = Tool(
+    name="Perform Data Analysis",
+    func=perform_data_analysis,
+    description="Perform a simple data analysis and visualization"
+)
+
+route_optimization_tool = Tool(
+    name="Optimize Route",
+    func=optimize_route,
+    description="Simulate route optimization for logistics"
+)
+
+excel_tool = Tool(
+    name="Read Excel File",
+    func=read_excel_file,
+    description="Read an Excel file and return its contents"
+)
+
 # Define agents
 project_manager = Agent(
     role='Project Manager',
@@ -104,11 +129,7 @@ project_manager = Agent(
     backstory=f"An experienced project manager with a background in: {cv_info}",
     verbose=True,
     llm=llm,
-    tools=[
-        search_tool,
-        Tool.from_function(name="create_gantt_chart", func=create_gantt_chart, description="Create a Gantt chart for project tasks"),
-        Tool.from_function(name="read_excel_file", func=read_excel_file, description="Read an Excel file and return its contents")
-    ]
+    tools=[search_tool, gantt_tool, excel_tool]
 )
 
 data_scientist = Agent(
@@ -117,11 +138,7 @@ data_scientist = Agent(
     backstory=f"A skilled data scientist with experience in: {cv_info}",
     verbose=True,
     llm=llm,
-    tools=[
-        search_tool,
-        Tool.from_function(name="perform_data_analysis", func=perform_data_analysis, description="Perform a simple data analysis and visualization"),
-        Tool.from_function(name="read_excel_file", func=read_excel_file, description="Read an Excel file and return its contents")
-    ]
+    tools=[search_tool, data_analysis_tool, excel_tool]
 )
 
 logistics_specialist = Agent(
@@ -130,11 +147,7 @@ logistics_specialist = Agent(
     backstory=f"An expert in logistics with a history of: {cv_info}",
     verbose=True,
     llm=llm,
-    tools=[
-        search_tool,
-        Tool.from_function(name="optimize_route", func=optimize_route, description="Simulate route optimization for logistics"),
-        Tool.from_function(name="read_excel_file", func=read_excel_file, description="Read an Excel file and return its contents")
-    ]
+    tools=[search_tool, route_optimization_tool, excel_tool]
 )
 
 # Streamlit UI
