@@ -13,3 +13,4 @@ duckduckgo-search
 python-dotenv
 transformers
 torch
+pysqlite3-binary

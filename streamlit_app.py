@@ -1,9 +1,18 @@
 import streamlit as st
+import sys
+import os
+
+# Use pysqlite3 if it's available, otherwise fallback to sqlite3
+try:
+    import pysqlite3
+    sys.modules['sqlite3'] = pysqlite3
+except ImportError:
+    pass
+
 from crewai import Agent, Task, Crew
 from langchain_community.llms import HuggingFaceHub
 from langchain.tools import DuckDuckGoSearchRun, Tool
 from langchain.agents import tool
-import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import io
