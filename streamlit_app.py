@@ -1,32 +1,13 @@
 import streamlit as st
-import sys
+import openai
+from dotenv import load_dotenv
 import os
 
-# Use pysqlite3 if it's available, otherwise fallback to sqlite3
-try:
-    import pysqlite3
-    sys.modules['sqlite3'] = pysqlite3
-except ImportError:
-    pass
+# Load environment variables
+load_dotenv()
 
-from langchain_huggingface import HuggingFaceEndpoint
-from langchain.memory import ConversationBufferMemory
-from langchain.chains import ConversationChain
-from langchain_community.utilities import DuckDuckGoSearchAPIWrapper
-
-# Set up Hugging Face API token
-huggingface_token = st.secrets["HUGGINGFACEHUB_API_TOKEN"]
-os.environ["HUGGINGFACEHUB_API_TOKEN"] = huggingface_token
-
-# Initialize the language model
-llm = HuggingFaceEndpoint(
-    repo_id="google/flan-t5-large",
-    temperature=0.7,
-    model_kwargs={"max_length": 512}
-)
-
-# Initialize the search tool
-search = DuckDuckGoSearchAPIWrapper()
+# Set up OpenAI API key
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Your CV information
 cv_info = """
@@ -44,15 +25,18 @@ Skills: Project Management, Data Science, Machine Learning, Logistics, Supply Ch
 Languages: German (native), English (fluent), Spanish (basic), Portuguese (basic)
 """
 
-# Set up the conversation memory
-memory = ConversationBufferMemory(return_messages=True)
-
-# Set up the conversation chain
-conversation = ConversationChain(
-    llm=llm,
-    memory=memory,
-    verbose=True
-)
+def get_openai_response(prompt):
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": f"You are an AI assistant that answers questions about Dominik Späth based on his CV. Here is the CV information: {cv_info}"},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        return response.choices[0].message['content']
+    except Exception as e:
+        return f"An error occurred: {str(e)}"
 
 # Streamlit UI
 st.title("Dominik Späth's Interactive CV")
@@ -65,10 +49,10 @@ else:
     st.sidebar.write("No profile picture uploaded yet.")
 
 # Create tabs for different sections
-tab1, tab2, tab3, tab4 = st.tabs(["Chat with AI", "Project Management App", "Data Science App", "Logistics App"])
+tab1, tab2, tab3, tab4 = st.tabs(["Chat about CV", "Project Management App", "Data Science App", "Logistics App"])
 
 with tab1:
-    st.header("Chat with AI about Dominik's Experience")
+    st.header("Chat about Dominik's Experience")
     st.write("Ask questions to learn more about Dominik's professional experience!")
 
     # Initialize chat history
@@ -88,11 +72,11 @@ with tab1:
         st.session_state.messages.append({"role": "user", "content": prompt})
 
         with st.chat_message("assistant"):
-            full_response = conversation.predict(input=f"Based on this CV: {cv_info}\n\nUser question: {prompt}")
-            st.markdown(full_response)
+            response = get_openai_response(prompt)
+            st.markdown(response)
         
         # Add assistant response to chat history
-        st.session_state.messages.append({"role": "assistant", "content": full_response})
+        st.session_state.messages.append({"role": "assistant", "content": response})
 
 with tab2:
     st.header("Project Management Application")
@@ -123,10 +107,9 @@ with tab4:
 st.sidebar.title("About")
 st.sidebar.info(
     "This app provides an interactive experience to learn about Dominik Späth's professional skills and experience. "
-    "You can chat with an AI assistant about Dominik's CV and explore specialized applications showcasing his expertise in "
+    "You can chat about Dominik's CV and explore specialized applications showcasing his expertise in "
     "project management, data science, and logistics."
 )
 st.sidebar.warning(
-    "Note: While the AI assistant can answer questions based on the provided CV, "
-    "for the most accurate and current information about Dominik's experience, please contact him directly."
+    "Note: This is a demo application. For the most accurate and current information about Dominik's experience, please contact him directly."
 )
