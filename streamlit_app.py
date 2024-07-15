@@ -1,13 +1,13 @@
 import streamlit as st
-import openai
+from openai import OpenAI
 from dotenv import load_dotenv
 import os
 
 # Load environment variables
 load_dotenv()
 
-# Set up OpenAI API key
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# Set up OpenAI client
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Your CV information
 cv_info = """
@@ -27,14 +27,14 @@ Languages: German (native), English (fluent), Spanish (basic), Portuguese (basic
 
 def get_openai_response(prompt):
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": f"You are an AI assistant that answers questions about Dominik Späth based on his CV. Here is the CV information: {cv_info}"},
                 {"role": "user", "content": prompt}
             ]
         )
-        return response.choices[0].message['content']
+        return response.choices[0].message.content
     except Exception as e:
         return f"An error occurred: {str(e)}"
 
