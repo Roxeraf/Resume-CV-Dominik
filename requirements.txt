@@ -1,7 +1,7 @@
 streamlit
 crewai
-langchain
-huggingface_hub
+langchain-community
+langchain-huggingface
 pandas
 matplotlib
 networkx

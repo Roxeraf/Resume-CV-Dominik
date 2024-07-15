@@ -10,8 +10,9 @@ except ImportError:
     pass
 
 from crewai import Agent, Task, Crew
-from langchain_community.llms import HuggingFaceHub
-from langchain.tools import DuckDuckGoSearchRun, Tool
+from langchain_huggingface import HuggingFaceEndpoint
+from langchain_community.tools import DuckDuckGoSearchRun
+from langchain_community.tools.base import Tool
 from langchain.agents import tool
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -26,7 +27,7 @@ huggingface_token = st.secrets["HUGGINGFACEHUB_API_TOKEN"]
 os.environ["HUGGINGFACEHUB_API_TOKEN"] = huggingface_token
 
 # Initialize the language model
-llm = HuggingFaceHub(repo_id="google/flan-t5-large", model_kwargs={"temperature": 0.5, "max_length": 512})
+llm = HuggingFaceEndpoint(repo_id="google/flan-t5-large", model_kwargs={"temperature": 0.5, "max_length": 512})
 
 # Initialize the search tool
 search_tool = DuckDuckGoSearchRun()
@@ -103,7 +104,11 @@ project_manager = Agent(
     backstory=f"An experienced project manager with a background in: {cv_info}",
     verbose=True,
     llm=llm,
-    tools=[search_tool, Tool.from_function(create_gantt_chart), Tool.from_function(read_excel_file)]
+    tools=[
+        search_tool,
+        Tool.from_function(name="create_gantt_chart", func=create_gantt_chart, description="Create a Gantt chart for project tasks"),
+        Tool.from_function(name="read_excel_file", func=read_excel_file, description="Read an Excel file and return its contents")
+    ]
 )
 
 data_scientist = Agent(
@@ -112,7 +117,11 @@ data_scientist = Agent(
     backstory=f"A skilled data scientist with experience in: {cv_info}",
     verbose=True,
     llm=llm,
-    tools=[search_tool, Tool.from_function(perform_data_analysis), Tool.from_function(read_excel_file)]
+    tools=[
+        search_tool,
+        Tool.from_function(name="perform_data_analysis", func=perform_data_analysis, description="Perform a simple data analysis and visualization"),
+        Tool.from_function(name="read_excel_file", func=read_excel_file, description="Read an Excel file and return its contents")
+    ]
 )
 
 logistics_specialist = Agent(
@@ -121,7 +130,11 @@ logistics_specialist = Agent(
     backstory=f"An expert in logistics with a history of: {cv_info}",
     verbose=True,
     llm=llm,
-    tools=[search_tool, Tool.from_function(optimize_route), Tool.from_function(read_excel_file)]
+    tools=[
+        search_tool,
+        Tool.from_function(name="optimize_route", func=optimize_route, description="Simulate route optimization for logistics"),
+        Tool.from_function(name="read_excel_file", func=read_excel_file, description="Read an Excel file and return its contents")
+    ]
 )
 
 # Streamlit UI
