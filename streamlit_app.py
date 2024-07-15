@@ -12,7 +12,7 @@ except ImportError:
 from crewai import Agent, Task, Crew
 from langchain_huggingface import HuggingFaceEndpoint
 from langchain.tools import Tool
-from langchain.utilities import DuckDuckGoSearchAPIWrapper
+from langchain_community.utilities import DuckDuckGoSearchAPIWrapper
 import pandas as pd
 import matplotlib.pyplot as plt
 import io
@@ -26,7 +26,11 @@ huggingface_token = st.secrets["HUGGINGFACEHUB_API_TOKEN"]
 os.environ["HUGGINGFACEHUB_API_TOKEN"] = huggingface_token
 
 # Initialize the language model
-llm = HuggingFaceEndpoint(repo_id="google/flan-t5-large", model_kwargs={"temperature": 0.5, "max_length": 512})
+llm = HuggingFaceEndpoint(
+    repo_id="google/flan-t5-large",
+    temperature=0.5,
+    model_kwargs={"max_length": 512}
+)
 
 # Initialize the search tool
 search = DuckDuckGoSearchAPIWrapper()
@@ -35,6 +39,8 @@ search_tool = Tool(
     func=search.run,
     description="useful for when you need to answer questions about current events"
 )
+
+# ... [rest of your code remains the same]
 
 # Your CV information
 cv_info = """
