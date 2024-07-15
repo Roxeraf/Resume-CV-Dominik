@@ -1,1 +1,15 @@
 streamlit
+crewai
+langchain
+huggingface_hub
+pandas
+matplotlib
+networkx
+seaborn
+scikit-learn
+numpy
+openpyxl
+duckduckgo-search
+python-dotenv
+transformers
+torch

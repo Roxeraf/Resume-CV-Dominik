@@ -1,6 +1,177 @@
 import streamlit as st
+from crewai import Agent, Task, Crew
+from langchain_community.llms import HuggingFaceHub
+from langchain.tools import DuckDuckGoSearchRun, Tool
+from langchain.agents import tool
+import os
+import pandas as pd
+import matplotlib.pyplot as plt
+import io
+import networkx as nx
+import seaborn as sns
+from sklearn.cluster import KMeans
+import numpy as np
 
-st.title("🎈 My new app")
-st.write(
-    "Let's start building! For help and inspiration, head over to [docs.streamlit.io](https://docs.streamlit.io/)."
+# Set up Hugging Face API token
+huggingface_token = st.secrets["HUGGINGFACEHUB_API_TOKEN"]
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = huggingface_token
+
+# Initialize the language model
+llm = HuggingFaceHub(repo_id="google/flan-t5-large", model_kwargs={"temperature": 0.5, "max_length": 512})
+
+# Initialize the search tool
+search_tool = DuckDuckGoSearchRun()
+
+# Your CV information
+cv_info = """
+Name: Dominik Justin Späth
+Education: 
+- Studium Wirtschaftsinformatik, Euro FH, 03.2022 - present
+- Ausbildung zur Fachkraft für Lagerlogistik, Simona AG, Kirn, 08.2014 - 06.2017
+Experience:
+- Projektleitung Machine Learning at Polytec-Group, Weierbach, 08.2023 - present
+- Logistics Planning Specialist at Polytec-Group, Weierbach, 04.2024 - present
+- Packaging Planner at Polytec-Group, Weierbach, 04.2023 - 03.2024
+- Projektleitung at Manpaz Limited, Santiago de Chile, 08.2022 - 31.01.2023
+- Lagerkoordinator at Simona AG, Kirn, 06.2017 - 07.2022
+Skills: Project Management, Data Science, Machine Learning, Logistics, Supply Chain Management
+Languages: German (native), English (fluent), Spanish (basic), Portuguese (basic)
+"""
+
+# Custom tools
+@tool
+def create_gantt_chart(project_tasks):
+    """Create a Gantt chart for project tasks."""
+    tasks = eval(project_tasks)
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.barh(range(len(tasks)), [task['duration'] for task in tasks], left=[task['start'] for task in tasks])
+    ax.set_yticks(range(len(tasks)))
+    ax.set_yticklabels([task['task'] for task in tasks])
+    ax.set_xlabel('Timeline')
+    ax.set_title('Project Gantt Chart')
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    st.image(buf)
+    return "Gantt chart created and displayed."
+
+@tool
+def perform_data_analysis(data_description):
+    """Perform a simple data analysis and visualization."""
+    data = pd.DataFrame({
+        'Category': ['A', 'B', 'C', 'D'],
+        'Value': [4, 7, 2, 9]
+    })
+    fig, ax = plt.subplots()
+    data.plot(kind='bar', x='Category', y='Value', ax=ax)
+    ax.set_title('Data Analysis Result')
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    st.image(buf)
+    return f"Data analysis performed on {data_description}. Bar chart created and displayed."
+
+@tool
+def optimize_route(locations):
+    """Simulate route optimization for logistics."""
+    optimized_route = ['Start'] + sorted(eval(locations)) + ['End']
+    st.write(f"Optimized Route: {' -> '.join(optimized_route)}")
+    return f"Route optimized for locations: {locations}"
+
+@tool
+def read_excel_file(file):
+    """Read an Excel file and return its contents as a DataFrame."""
+    try:
+        df = pd.read_excel(file)
+        return df.to_dict()
+    except Exception as e:
+        return f"Error reading file: {str(e)}"
+
+# Define agents
+project_manager = Agent(
+    role='Project Manager',
+    goal='Manage projects and coordinate team efforts',
+    backstory=f"An experienced project manager with a background in: {cv_info}",
+    verbose=True,
+    llm=llm,
+    tools=[search_tool, Tool.from_function(create_gantt_chart), Tool.from_function(read_excel_file)]
+)
+
+data_scientist = Agent(
+    role='Data Scientist',
+    goal='Analyze data and implement machine learning solutions',
+    backstory=f"A skilled data scientist with experience in: {cv_info}",
+    verbose=True,
+    llm=llm,
+    tools=[search_tool, Tool.from_function(perform_data_analysis), Tool.from_function(read_excel_file)]
+)
+
+logistics_specialist = Agent(
+    role='Logistics Specialist',
+    goal='Optimize logistics processes and improve efficiency',
+    backstory=f"An expert in logistics with a history of: {cv_info}",
+    verbose=True,
+    llm=llm,
+    tools=[search_tool, Tool.from_function(optimize_route), Tool.from_function(read_excel_file)]
+)
+
+# Streamlit UI
+st.title("Interactive CV Experience with Dominik Späth")
+st.write("Ask questions or propose scenarios to interact with different aspects of Dominik's professional experience!")
+
+# File upload
+uploaded_file = st.file_uploader("Upload an Excel file (optional)", type="xlsx")
+
+# User input
+user_input = st.text_input("Enter your question or scenario:")
+
+if user_input:
+    # Create tasks based on user input
+    task1 = Task(
+        description=f"Respond to the user's input from a project management perspective: {user_input}",
+        agent=project_manager
+    )
+
+    task2 = Task(
+        description=f"Analyze the user's input from a data science perspective: {user_input}",
+        agent=data_scientist
+    )
+
+    task3 = Task(
+        description=f"Consider the logistics implications of the user's input: {user_input}",
+        agent=logistics_specialist
+    )
+
+    # Create and run the crew
+    crew = Crew(
+        agents=[project_manager, data_scientist, logistics_specialist],
+        tasks=[task1, task2, task3],
+        verbose=2
+    )
+
+    with st.spinner("Generating responses..."):
+        result = crew.kickoff()
+
+    # Display results
+    st.subheader("Responses:")
+    st.write(result)
+
+# Test Hugging Face Model
+if st.button("Test Hugging Face Model"):
+    with st.spinner("Testing the model..."):
+        try:
+            response = llm("Translate the following English text to French: 'Hello, how are you?'")
+            st.success(f"Model response: {response}")
+        except Exception as e:
+            st.error(f"An error occurred: {str(e)}")
+
+# Add information about the app
+st.sidebar.title("About")
+st.sidebar.info(
+    "This app showcases Dominik Späth's skills in project management, data science, and logistics. "
+    "The AI agents can access the internet and use custom tools to demonstrate specific capabilities."
+)
+st.sidebar.warning(
+    "Note: While the AI agents can search for current information and use custom tools, their core knowledge is based on the provided CV. "
+    "For the most accurate and current information about Dominik's experience, please contact him directly."
 )
