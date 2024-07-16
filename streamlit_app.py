@@ -2,6 +2,7 @@ import streamlit as st
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
+import base64
 
 # Load environment variables
 load_dotenv()
@@ -25,6 +26,13 @@ Skills: Project Management, Data Science, Machine Learning, Logistics, Supply Ch
 Languages: German (native), English (fluent), Spanish (basic), Portuguese (basic)
 """
 
+def get_image_base64(image_path):
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode('utf-8')
+
+# Load the profile picture
+profile_pic_base64 = get_image_base64("dominik_profile.jpg")
+
 def get_openai_response(prompt):
     try:
         response = client.chat.completions.create(
@@ -41,19 +49,30 @@ def get_openai_response(prompt):
 # Streamlit UI
 st.title("Dominik Späth's Interactive CV")
 
-# Display profile picture
-profile_pic = st.sidebar.file_uploader("Upload a profile picture", type=["jpg", "png", "jpeg"])
-if profile_pic is not None:
-    st.sidebar.image(profile_pic, caption="Dominik Späth", use_column_width=True)
-else:
-    st.sidebar.write("No profile picture uploaded yet.")
-
 # Create tabs for different sections
 tab1, tab2, tab3, tab4 = st.tabs(["Chat about CV", "Project Management App", "Data Science App", "Logistics App"])
 
 with tab1:
     st.header("Chat about Dominik's Experience")
     st.write("Ask questions to learn more about Dominik's professional experience!")
+
+    # Display profile picture
+    st.sidebar.markdown(
+        f"""
+        <style>
+        .sidebar-img {{
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            width: 150px;
+            border-radius: 50%;
+        }}
+        </style>
+        <img src="data:image/jpeg;base64,{profile_pic_base64}" class="sidebar-img">
+        """,
+        unsafe_allow_html=True
+    )
+    st.sidebar.write("Dominik Späth")
 
     # Initialize chat history
     if "messages" not in st.session_state:
