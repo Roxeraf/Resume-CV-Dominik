@@ -6,6 +6,7 @@ import base64
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from datetime import datetime, date
 
 # Load environment variables
 load_dotenv()
@@ -18,6 +19,9 @@ cv_info = """
 Name: Dominik Justin Späth
 Birthday: March 30, 1998
 Email: dominik_justin@outlook.de
+
+Personal:
+- Engaged to be married on September 6, 2024
 
 Education: 
 - Studium Wirtschaftsinformatik, Euro FH, 03.2022 - present
@@ -135,6 +139,13 @@ While this intense focus allows me to produce high-quality work and innovative s
 This self-awareness and the steps I'm taking to improve have actually enhanced my project management skills and my ability to collaborate effectively with teams. It's an ongoing process, but I've already seen positive results in terms of increased productivity and more balanced project outcomes."""
 
             return weakness_response
+        elif "personal" in prompt.lower() or "relationship" in prompt.lower() or "married" in prompt.lower() or "engaged" in prompt.lower():
+            today = date.today()
+            wedding_date = date(2024, 9, 6)
+            if today < wedding_date:
+                return "Dominik is currently engaged to his beautiful fiancée. They are excited to be getting married on September 6, 2024."
+            else:
+                return "Dominik got married to his beautiful wife on September 6, 2024. He's very happy in his marriage."
         else:
             response = client.chat.completions.create(
                 model="gpt-4o-mini",  # Make sure this model name is correct
@@ -150,7 +161,9 @@ This self-awareness and the steps I'm taking to improve have actually enhanced m
                     - Highlight your problem-solving skills and adaptability
                     - When appropriate, mention your interest in sustainability and industry trends
                     
-                    Provide concise but informative answers, and be ready to elaborate on specific skills or experiences if asked."""},
+                    Provide concise but informative answers, and be ready to elaborate on specific skills or experiences if asked.
+                    
+                    Remember to mention Dominik's personal life if asked: He is engaged to be married on September 6, 2024. After this date, mention that he is married."""},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.7
@@ -193,6 +206,12 @@ with tab1:
     st.sidebar.write("Dominik Späth")
     st.sidebar.write("Born: March 30, 1998")
     st.sidebar.write("Email: dominik_justin@outlook.de")
+    today = date.today()
+    wedding_date = date(2024, 9, 6)
+    if today < wedding_date:
+        st.sidebar.write("Status: Engaged")
+    else:
+        st.sidebar.write("Status: Married")
 
     # Initialize chat history
     if "messages" not in st.session_state:
