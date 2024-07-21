@@ -136,18 +136,19 @@ def generate_gantt_chart(df):
 
 def generate_flow_chart(steps):
     fig = go.Figure(data=[go.Sankey(
-        node = dict(
-          pad = 15,
-          thickness = 20,
-          line = dict(color = "black", width = 0.5),
-          label = [step["name"] for step in steps],
-          color = "blue"
+        node=dict(
+            pad=15,
+            thickness=20,
+            line=dict(color="black", width=0.5),
+            label=[step["name"] for step in steps],
+            color="blue"
         ),
-        link = dict(
-          source = [steps.index(step) for step in steps[:-1]],
-          target = [steps.index(step)+1 for step in steps[:-1]],
-          value = [1] * (len(steps) - 1)
-  ))])
+        link=dict(
+            source=[steps.index(step) for step in steps[:-1]],
+            target=[steps.index(step)+1 for step in steps[:-1]],
+            value=[1] * (len(steps) - 1)
+        )
+    )])
     fig.update_layout(title_text="Process Flow", font_size=10)
     return fig
 
