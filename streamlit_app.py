@@ -4,7 +4,8 @@ from dotenv import load_dotenv
 import os
 import base64
 import smtplib
-from email.message import EmailMessage
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # Load environment variables
 load_dotenv()
@@ -94,22 +95,22 @@ def get_image_base64(image_path):
 profile_pic_base64 = get_image_base64("dominik_profile.jpg")
 
 def send_email(name, email, message):
-    # Your email configuration
-    smtp_server = "smtp.office365.com"  # For Outlook
-    smtp_port = 587  # For TLS
-    sender_email = "dominik_justin@outlook.de"  # Your email address
-    sender_password = st.secrets["EMAIL_PASSWORD"]  # Get password from Streamlit secrets
+    sender_email = "dominikjustinspath@gmail.com"
+    sender_password = st.secrets["GMAIL_APP_PASSWORD"]
+    receiver_email = "dominik_justin@outlook.de"
 
     # Create the email content
-    msg = EmailMessage()
-    msg.set_content(f"Name: {name}\nEmail: {email}\n\nMessage:\n{message}")
-    msg['Subject'] = f"New contact from {name} via Interactive CV"
+    msg = MIMEMultipart()
     msg['From'] = sender_email
-    msg['To'] = sender_email  # Sending to yourself
+    msg['To'] = receiver_email
+    msg['Subject'] = f"New contact from {name} via Interactive CV"
+
+    body = f"Name: {name}\nEmail: {email}\n\nMessage:\n{message}"
+    msg.attach(MIMEText(body, 'plain'))
 
     # Send the email
     try:
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
             server.starttls()
             server.login(sender_email, sender_password)
             server.send_message(msg)
