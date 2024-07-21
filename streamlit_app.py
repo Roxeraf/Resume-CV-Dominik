@@ -7,11 +7,6 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, date
-import plotly.express as px
-import plotly.graph_objects as go
-import pandas as pd
-import numpy as np
-import json
 
 # Load environment variables
 load_dotenv()
@@ -30,11 +25,12 @@ Education:
 - Ausbildung zur Fachkraft für Lagerlogistik, Simona AG, Kirn, 08.2014 - 06.2017
 
 Experience:
+- Projektleitung Machine Learning at Polytec-Group, Weierbach, 08.2023 - present
+  • Leading machine learning projects in the automotive industry
+  • Implementing AI solutions for quality control and process optimization
 - Logistics Planning Specialist at Polytec-Group, Weierbach, 04.2024 - present
   • Optimizing supply chain processes using data-driven approaches
   • Developing and implementing logistics strategies
-  • Leading machine learning projects in the automotive industry
-  • Implementing AI solutions for quality control and process optimization
 - Packaging Planner at Polytec-Group, Weierbach, 04.2023 - 03.2024
   • Designing efficient packaging solutions for automotive components
   • Reducing packaging costs while improving product protection
@@ -119,24 +115,6 @@ def send_email(name, email, message):
         print(f"An error occurred: {e}")
         return False
 
-def generate_flow_chart(steps):
-    fig = go.Figure(data=[go.Sankey(
-        node=dict(
-            pad=15,
-            thickness=20,
-            line=dict(color="black", width=0.5),
-            label=[step["name"] for step in steps],
-            color="blue"
-        ),
-        link=dict(
-            source=[steps.index(step) for step in steps[:-1]],
-            target=[steps.index(step)+1 for step in steps[:-1]],
-            value=[1] * (len(steps) - 1)
-        )
-    )])
-    fig.update_layout(title_text="Process Flow", font_size=10)
-    return fig
-
 def get_interactive_cv_response(prompt, conversation_history):
     try:
         messages = [
@@ -162,7 +140,10 @@ def get_interactive_cv_response(prompt, conversation_history):
             Remember to mention Dominik's personal life if asked: He is engaged to be married on September 6, 2024. After this date, mention that he is married."""}
         ]
         
+        # Add conversation history to messages
         messages.extend(conversation_history)
+        
+        # Add the new user prompt
         messages.append({"role": "user", "content": prompt})
         
         response = client.chat.completions.create(
@@ -178,13 +159,16 @@ def get_interactive_cv_response(prompt, conversation_history):
 st.set_page_config(page_title="Dominik Späth's Interactive CV", page_icon="📄", layout="wide")
 st.title("Dominik Späth's Interactive CV")
 
+# Create tabs for different sections
 tab1, tab2 = st.tabs(["Interactive CV Chat", "Contact"])
 
 with tab1:
     st.header("Chat with Dominik's AI Assistant")
     st.write("""
     Hello! I'm an AI assistant representing Dominik Späth. I can tell you about Dominik's professional experience, 
-    skills, and interests. I can also generate code snippets and provide detailed explanations. Feel free to ask me anything!
+    skills, and interests. Feel free to ask me anything about his career, propose challenges, or inquire about 
+    specific skills. I can provide detailed information and showcase how Dominik's expertise might be applied 
+    in various scenarios. What would you like to know?
     """)
 
     # Display profile picture if available
@@ -208,26 +192,28 @@ with tab1:
     st.sidebar.write("Dominik Späth")
     st.sidebar.write("Born: March 30, 1998")
     st.sidebar.write("Email: dominik_justin@outlook.de")
-    
+
+    # Initialize chat history
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
+    # Display chat messages from history on rerun
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
+    # React to user input
     if prompt := st.chat_input("What would you like to know or discuss?"):
+        # Display user message in chat message container
         st.chat_message("user").markdown(prompt)
+        # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": prompt})
 
         with st.chat_message("assistant"):
             response = get_interactive_cv_response(prompt, st.session_state.messages)
             st.markdown(response)
-            # Check if the response contains any code snippets or specific formats and display them accordingly
-            if "```" in response:
-                code_snippet = response.split("```")[1]
-                st.code(code_snippet, language="python")
-
+        
+        # Add assistant response to chat history
         st.session_state.messages.append({"role": "assistant", "content": response})
 
 with tab2:
@@ -258,6 +244,5 @@ st.sidebar.info(
 st.sidebar.warning(
     "Note: This is a demo application. For the most accurate and current information about Dominik's experience, please contact him directly."
 )
-
 
 
