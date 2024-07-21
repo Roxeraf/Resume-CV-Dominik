@@ -4,7 +4,9 @@ from dotenv import load_dotenv
 import os
 import base64
 from datetime import date
-from utils import send_email, get_image_base64
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # Load environment variables
 load_dotenv()
@@ -84,6 +86,37 @@ Career Goals:
 - To drive digital transformation in the automotive industry through innovative AI solutions
 - To contribute to the development of more sustainable and efficient logistics practices
 """
+
+def send_email(name, email, message):
+    sender_email = "dominikjustinspath@gmail.com"
+    sender_password = st.secrets["GMAIL_APP_PASSWORD"]
+    receiver_email = "dominik_justin@outlook.de"
+
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = receiver_email
+    msg['Subject'] = f"New contact from {name} via Interactive CV"
+
+    body = f"Name: {name}\nEmail: {email}\n\nMessage:\n{message}"
+    msg.attach(MIMEText(body, 'plain'))
+
+    try:
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            server.starttls()
+            server.login(sender_email, sender_password)
+            server.send_message(msg)
+        return True
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return False
+
+def get_image_base64(image_path):
+    try:
+        with open(image_path, "rb") as image_file:
+            return base64.b64encode(image_file.read()).decode('utf-8')
+    except FileNotFoundError:
+        st.warning(f"Profile image not found: {image_path}")
+        return None
 
 def get_openai_response(prompt):
     try:
