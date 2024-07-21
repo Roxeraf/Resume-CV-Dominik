@@ -104,7 +104,7 @@ This self-awareness and the steps I'm taking to improve have actually enhanced m
             return weakness_response
         else:
             response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o-mini",  # Updated model name
                 messages=[
                     {"role": "system", "content": f"""You are an AI assistant representing Dominik Späth. 
                     You have access to Dominik's CV and should answer questions based on this information: {cv_info}
