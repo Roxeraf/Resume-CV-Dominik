@@ -12,11 +12,6 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 import json
-import openpyxl
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
-from reportlab.lib.styles import getSampleStyleSheet
-import io
 
 # Load environment variables
 load_dotenv()
@@ -125,10 +120,6 @@ def send_email(name, email, message):
         print(f"An error occurred: {e}")
         return False
 
-def generate_gantt_chart(df):
-    fig = px.timeline(df, x_start="Start", x_end="Finish", y="Task", color="Resource")
-    return fig
-
 def generate_flow_chart(steps):
     fig = go.Figure(data=[go.Sankey(
         node=dict(
@@ -147,160 +138,6 @@ def generate_flow_chart(steps):
     fig.update_layout(title_text="Process Flow", font_size=10)
     return fig
 
-def run_simple_ml(X, y):
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    model = LinearRegression()
-    model.fit(X_train, y_train)
-    y_pred = model.predict(X_test)
-    mse = mean_squared_error(y_test, y_pred)
-    r2 = r2_score(y_test, y_pred)
-    return mse, r2, model.coef_, model.intercept_
-
-def parse_ml_input(input_str):
-    try:
-        data = json.loads(input_str)
-        X = np.array(data['X']).reshape(-1, 1)
-        y = np.array(data['y'])
-        return X, y
-    except:
-        return None, None
-
-def parse_gantt_input(input_str):
-    try:
-        tasks = json.loads(input_str)
-        df = pd.DataFrame(tasks)
-        return df
-    except:
-        return None
-
-def parse_flow_input(input_str):
-    try:
-        steps = json.loads(input_str)
-        return steps
-    except:
-        return None
-
-def export_to_excel(data, chart_type):
-    output = io.BytesIO()
-    workbook = openpyxl.Workbook()
-    sheet = workbook.active
-    
-    if chart_type == "gantt":
-        sheet.title = "Gantt Chart Data"
-        headers = ["Task", "Start", "Finish", "Resource"]
-        for col, header in enumerate(headers, start=1):
-            sheet.cell(row=1, column=col, value=header)
-        for row, task in enumerate(data, start=2):
-            sheet.cell(row=row, column=1, value=task['Task'])
-            sheet.cell(row=row, column=2, value=task['Start'])
-            sheet.cell(row=row, column=3, value=task['Finish'])
-            sheet.cell(row=row, column=4, value=task['Resource'])
-    elif chart_type == "flow":
-        sheet.title = "Flow Chart Data"
-        sheet.cell(row=1, column=1, value="Step")
-        for row, step in enumerate(data, start=2):
-            sheet.cell(row=row, column=1, value=step['name'])
-    elif chart_type == "ml":
-        sheet.title = "ML Analysis Data"
-        sheet.cell(row=1, column=1, value="X")
-        sheet.cell(row=1, column=2, value="y")
-        for row, (x, y) in enumerate(zip(data['X'], data['y']), start=2):
-            sheet.cell(row=row, column=1, value=x)
-            sheet.cell(row=row, column=2, value=y)
-        sheet.cell(row=1, column=4, value="MSE")
-        sheet.cell(row=2, column=4, value=data['mse'])
-        sheet.cell(row=1, column=5, value="R-squared")
-        sheet.cell(row=2, column=5, value=data['r2'])
-    
-    workbook.save(output)
-    return output.getvalue()
-
-def generate_pdf_from_json(data, chart_type):
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter)
-    elements = []
-    
-    styles = getSampleStyleSheet()
-    title_style = styles['Heading1']
-    normal_style = styles['Normal']
-    
-    if chart_type == "ml_model":
-        elements.append(Paragraph("ML Model Analysis", title_style))
-        elements.append(Paragraph(f"Mean Squared Error: {data['mse']:.4f}", normal_style))
-        elements.append(Paragraph(f"R-squared Score: {data['r2']:.4f}", normal_style))
-        
-        table_data = [['X', 'y']] + list(zip(data['X'], data['y']))
-        t = Table(table_data)
-        t.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 14),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, -1), 12),
-            ('TOPPADDING', (0, 1), (-1, -1), 6),
-            ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
-        ]))
-        elements.append(t)
-    
-    elif chart_type == "gantt_chart":
-        elements.append(Paragraph("Gantt Chart Data", title_style))
-        table_data = [['Task', 'Start', 'Finish', 'Resource']]
-        for task in data:
-            table_data.append([task['Task'], task['Start'], task['Finish'], task['Resource']])
-        t = Table(table_data)
-        t.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 14),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, -1), 12),
-            ('TOPPADDING', (0, 1), (-1, -1), 6),
-            ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
-        ]))
-        elements.append(t)
-    
-    elif chart_type == "flow_chart":
-        elements.append(Paragraph("Flow Chart Steps", title_style))
-        table_data = [['Step']]
-        for step in data:
-            table_data.append([step['name']])
-        t = Table(table_data)
-        t.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 14),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, -1), 12),
-            ('TOPPADDING', (0, 1), (-1, -1), 6),
-            ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
-        ]))
-        elements.append(t)
-    
-    doc.build(elements)
-    buffer.seek(0)
-    return buffer.getvalue()
-
 def get_interactive_cv_response(prompt, conversation_history):
     try:
         messages = [
@@ -315,19 +152,12 @@ def get_interactive_cv_response(prompt, conversation_history):
             - Highlight Dominik's problem-solving skills and adaptability
             - When appropriate, mention his interest in sustainability and industry trends
             
-            You can also generate ML models, Gantt charts, and flow charts. When a user requests one of these, respond with the appropriate JSON format:
-
-            For ML models:
-            {{"type": "ml_model", "data": {{"X": [x1, x2, ...], "y": [y1, y2, ...]}}, "export": "excel/pdf"}}
-
-            For Gantt charts:
-            {{"type": "gantt_chart", "data": [{{"Task": "task1", "Start": "YYYY-MM-DD", "Finish": "YYYY-MM-DD", "Resource": "resource1"}}, ...], "export": "excel/pdf"}}
-
-            For flow charts:
-            {{"type": "flow_chart", "data": [{{"name": "step1"}}, {{"name": "step2"}}, ...], "export": "excel/pdf"}}
-
-            Include the "export" key with value "excel" or "pdf" based on the user's request.
-
+            If asked about specific skills or challenges:
+            1. Interpret the task in the context of Dominik's skills
+            2. Provide a detailed explanation of how Dominik's skills apply to the task
+            3. If relevant, suggest a hypothetical code snippet or data analysis approach
+            4. Relate the solution to industry trends or best practices
+            
             Provide informative answers, and be ready to elaborate on specific skills or experiences.
             
             Remember to mention Dominik's personal life if asked: He is engaged to be married on September 6, 2024. After this date, mention that he is married."""}
@@ -355,7 +185,7 @@ with tab1:
     st.header("Chat with Dominik's AI Assistant")
     st.write("""
     Hello! I'm an AI assistant representing Dominik Späth. I can tell you about Dominik's professional experience, 
-    skills, and interests. I can also generate ML models, Gantt charts, and flow charts. Feel free to ask me anything!
+    skills, and interests. I can also generate code snippets and provide detailed explanations. Feel free to ask me anything!
     """)
 
     # Display profile picture if available
@@ -386,15 +216,6 @@ with tab1:
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
-            if "type" in message.get("additional_content", {}):
-                if message["additional_content"]["type"] == "ml_model":
-                    fig = message["additional_content"]["figure"]
-                    st.plotly_chart(fig)
-                    st.write(f"Mean Squared Error: {message['additional_content']['mse']}")
-                    st.write(f"R-squared Score: {message['additional_content']['r2']}")
-                elif message["additional_content"]["type"] in ["gantt_chart", "flow_chart"]:
-                    fig = message["additional_content"]["figure"]
-                    st.plotly_chart(fig)
 
     if prompt := st.chat_input("What would you like to know or discuss?"):
         st.chat_message("user").markdown(prompt)
@@ -404,69 +225,17 @@ with tab1:
             response = get_interactive_cv_response(prompt, st.session_state.messages)
             try:
                 response_data = json.loads(response)
-                if response_data["type"] == "ml_model":
-                    X, y = parse_ml_input(json.dumps(response_data["data"]))
-                    if X is not None and y is not None:
-                        mse, r2, coef, intercept = run_simple_ml(X, y)
-                        fig = px.scatter(x=X.flatten(), y=y, trendline="ols")
-                        st.markdown("Here's the ML model you requested:")
-                        st.plotly_chart(fig)
-                        st.write(f"Mean Squared Error: {mse}")
-                        st.write(f"R-squared Score: {r2}")
-                        
-                        export_format = response_data.get("export", "").lower()
-                        if export_format in ["excel", "pdf"]:
-                            export_data = {"X": X.flatten().tolist(), "y": y.tolist(), "mse": mse, "r2": r2}
-                            if export_format == "excel":
-                                excel_data = export_to_excel(export_data, "ml")
-                                st.download_button(label="Download Excel", data=excel_data, file_name="ml_analysis.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                            else:
-                                pdf_data = generate_pdf_from_json(export_data, "ml_model")
-                                st.download_button(label="Download PDF", data=pdf_data, file_name="ml_analysis.pdf", mime="application/pdf")
-                        
-                        additional_content = {"type": "ml_model", "figure": fig, "mse": mse, "r2": r2}
-                elif response_data["type"] == "gantt_chart":
-                    df = parse_gantt_input(json.dumps(response_data["data"]))
-                    if df is not None:
-                        fig = generate_gantt_chart(df)
-                        st.markdown("Here's the Gantt chart you requested:")
-                        st.plotly_chart(fig)
-                        
-                        export_format = response_data.get("export", "").lower()
-                        if export_format in ["excel", "pdf"]:
-                            if export_format == "excel":
-                                excel_data = export_to_excel(response_data["data"], "gantt")
-                                st.download_button(label="Download Excel", data=excel_data, file_name="gantt_chart.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                            else:
-                                pdf_data = generate_pdf_from_json(response_data["data"], "gantt_chart")
-                                st.download_button(label="Download PDF", data=pdf_data, file_name="gantt_chart.pdf", mime="application/pdf")
-                        
-                        additional_content = {"type": "gantt_chart", "figure": fig}
-                elif response_data["type"] == "flow_chart":
-                    steps = parse_flow_input(json.dumps(response_data["data"]))
-                    if steps is not None:
-                        fig = generate_flow_chart(steps)
-                        st.markdown("Here's the flow chart you requested:")
-                        st.plotly_chart(fig)
-                        
-                        export_format = response_data.get("export", "").lower()
-                        if export_format in ["excel", "pdf"]:
-                            if export_format == "excel":
-                                excel_data = export_to_excel(response_data["data"], "flow")
-                                st.download_button(label="Download Excel", data=excel_data, file_name="flow_chart.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                            else:
-                                pdf_data = generate_pdf_from_json(response_data["data"], "flow_chart")
-                                st.download_button(label="Download PDF", data=pdf_data, file_name="flow_chart.pdf", mime="application/pdf")
-                        
-                        additional_content = {"type": "flow_chart", "figure": fig}
+                if response_data["type"] == "flow_chart":
+                    steps = response_data["data"]
+                    fig = generate_flow_chart(steps)
+                    st.markdown("Here's the flow chart you requested:")
+                    st.plotly_chart(fig)
                 else:
                     st.markdown(response)
-                    additional_content = {}
             except json.JSONDecodeError:
                 st.markdown(response)
-                additional_content = {}
         
-        st.session_state.messages.append({"role": "assistant", "content": response, "additional_content": additional_content})
+        st.session_state.messages.append({"role": "assistant", "content": response})
 
 with tab2:
     st.header("Contact Dominik")
@@ -496,4 +265,5 @@ st.sidebar.info(
 st.sidebar.warning(
     "Note: This is a demo application. For the most accurate and current information about Dominik's experience, please contact him directly."
 )
+
 
