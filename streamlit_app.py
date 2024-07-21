@@ -20,9 +20,6 @@ Name: Dominik Justin Späth
 Birthday: March 30, 1998
 Email: dominik_justin@outlook.de
 
-Personal:
-- Engaged to be married on September 6, 2024
-
 Education: 
 - Studium Wirtschaftsinformatik, Euro FH, 03.2022 - present
 - Ausbildung zur Fachkraft für Lagerlogistik, Simona AG, Kirn, 08.2014 - 06.2017
@@ -121,7 +118,7 @@ def get_image_base64(image_path):
 def get_openai_response(prompt):
     try:
         if "contact" in prompt.lower() or "get in touch" in prompt.lower():
-            return "If you'd like to get in touch with Dominik, please use the contact form in the 'Contact' section below. You can leave your message and contact information there, and Dominik will get back to you soon."
+            return "If you'd like to get in touch with Dominik, please use the contact form below. You can leave your message and contact information there, and Dominik will get back to you soon."
         elif "weakness" in prompt.lower() or "weaknesses" in prompt.lower():
             weakness_response = """One of my main areas for improvement is my tendency to become deeply engrossed in projects, sometimes to the point where I may lose track of time or overlook other tasks. This stems from my passion for problem-solving and my drive to see projects through to completion.
 
@@ -134,13 +131,6 @@ While this intense focus allows me to produce high-quality work and innovative s
 This self-awareness and the steps I'm taking to improve have actually enhanced my project management skills and my ability to collaborate effectively with teams. It's an ongoing process, but I've already seen positive results in terms of increased productivity and more balanced project outcomes."""
 
             return weakness_response
-        elif "personal" in prompt.lower() or "relationship" in prompt.lower() or "married" in prompt.lower() or "engaged" in prompt.lower():
-            today = date.today()
-            wedding_date = date(2024, 9, 6)
-            if today < wedding_date:
-                return "Dominik is currently engaged to his beautiful fiancée. They are excited to be getting married on September 6, 2024."
-            else:
-                return "Dominik got married to his beautiful wife on September 6, 2024. He's very happy in his marriage."
         else:
             response = client.chat.completions.create(
                 model="gpt-4o-mini",  # Using the specified model
@@ -156,9 +146,7 @@ This self-awareness and the steps I'm taking to improve have actually enhanced m
                     - Highlight your problem-solving skills and adaptability
                     - When appropriate, mention your interest in sustainability and industry trends
                     
-                    Provide concise but informative answers, and be ready to elaborate on specific skills or experiences if asked.
-                    
-                    Remember to mention Dominik's personal life if asked: He is engaged to be married on September 6, 2024. After this date, mention that he is married."""},
+                    Provide concise but informative answers, and be ready to elaborate on specific skills or experiences if asked."""},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.7
@@ -179,18 +167,11 @@ if profile_pic_base64:
 st.sidebar.write("Dominik Späth")
 st.sidebar.write("Born: March 30, 1998")
 st.sidebar.write("Email: dominik_justin@outlook.de")
-today = date.today()
-wedding_date = date(2024, 9, 6)
-if today < wedding_date:
-    st.sidebar.write("Status: Engaged")
-else:
-    st.sidebar.write("Status: Married")
 
 st.sidebar.title("About")
 st.sidebar.info(
     "This app provides an interactive experience to learn about Dominik Späth's professional skills and experience. "
-    "You can chat about Dominik's CV and explore specialized applications showcasing his expertise in "
-    "project management, data science, and logistics."
+    "You can chat about Dominik's CV and get in touch using the contact form below."
 )
 st.sidebar.warning(
     "Note: This is a demo application. For the most accurate and current information about Dominik's experience, please contact him directly."
