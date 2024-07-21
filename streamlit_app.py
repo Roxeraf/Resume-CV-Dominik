@@ -115,33 +115,40 @@ def send_email(name, email, message):
         print(f"An error occurred: {e}")
         return False
 
-def get_interactive_cv_response(prompt):
+def get_interactive_cv_response(prompt, conversation_history):
     try:
+        messages = [
+            {"role": "system", "content": f"""You are an AI assistant representing Dominik Späth, capable of discussing his CV and showcasing his skills. 
+            You have access to Dominik's CV and should answer questions based on this information: {cv_info}
+            
+            When responding:
+            - Be professional yet approachable
+            - Show enthusiasm for technology, especially AI and machine learning
+            - Demonstrate a strong analytical mindset
+            - Express a collaborative and positive attitude
+            - Highlight Dominik's problem-solving skills and adaptability
+            - When appropriate, mention his interest in sustainability and industry trends
+            
+            If asked about specific skills or challenges:
+            1. Interpret the task in the context of Dominik's skills
+            2. Provide a detailed explanation of how Dominik's skills apply to the task
+            3. If relevant, suggest a hypothetical code snippet or data analysis approach
+            4. Relate the solution to industry trends or best practices
+            
+            Provide informative answers, and be ready to elaborate on specific skills or experiences.
+            
+            Remember to mention Dominik's personal life if asked: He is engaged to be married on September 6, 2024. After this date, mention that he is married."""}
+        ]
+        
+        # Add conversation history to messages
+        messages.extend(conversation_history)
+        
+        # Add the new user prompt
+        messages.append({"role": "user", "content": prompt})
+        
         response = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": f"""You are an AI assistant representing Dominik Späth, capable of discussing his CV and showcasing his skills. 
-                You have access to Dominik's CV and should answer questions based on this information: {cv_info}
-                
-                When responding:
-                - Be professional yet approachable
-                - Show enthusiasm for technology, especially AI and machine learning
-                - Demonstrate a strong analytical mindset
-                - Express a collaborative and positive attitude
-                - Highlight Dominik's problem-solving skills and adaptability
-                - When appropriate, mention his interest in sustainability and industry trends
-                
-                If asked about specific skills or challenges:
-                1. Interpret the task in the context of Dominik's skills
-                2. Provide a detailed explanation of how Dominik's skills apply to the task
-                3. If relevant, suggest a hypothetical code snippet or data analysis approach
-                4. Relate the solution to industry trends or best practices
-                
-                Provide informative answers, and be ready to elaborate on specific skills or experiences.
-                
-                Remember to mention Dominik's personal life if asked: He is engaged to be married on September 6, 2024. After this date, mention that he is married."""},
-                {"role": "user", "content": prompt}
-            ],
+            messages=messages,
             temperature=0.7
         )
         return response.choices[0].message.content
@@ -203,7 +210,7 @@ with tab1:
         st.session_state.messages.append({"role": "user", "content": prompt})
 
         with st.chat_message("assistant"):
-            response = get_interactive_cv_response(prompt)
+            response = get_interactive_cv_response(prompt, st.session_state.messages)
             st.markdown(response)
         
         # Add assistant response to chat history
