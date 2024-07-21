@@ -8,21 +8,11 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, date
 
-from langchain.agents import load_tools
-from langchain.agents import initialize_agent
-from langchain.agents import AgentType
-from langchain.llms import OpenAI as LangChainOpenAI
-
 # Load environment variables
 load_dotenv()
 
 # Set up OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-# Set up LangChain tools
-llm = LangChainOpenAI(temperature=0, model_name="gpt-4o-mini")
-tools = load_tools(["python_repl", "requests_all", "terminal"], llm=llm)
-agent = initialize_agent(tools, llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True)
 
 # Your CV information
 cv_info = """
@@ -127,72 +117,52 @@ def send_email(name, email, message):
 
 def get_openai_response(prompt):
     try:
-        if "contact" in prompt.lower() or "get in touch" in prompt.lower():
-            return "If you'd like to get in touch with Dominik, please use the contact form in the 'Contact' tab. You can leave your message and contact information there, and Dominik will get back to you soon."
-        elif "weakness" in prompt.lower() or "weaknesses" in prompt.lower():
-            weakness_response = """One of my main areas for improvement is my tendency to become deeply engrossed in projects, sometimes to the point where I may lose track of time or overlook other tasks. This stems from my passion for problem-solving and my drive to see projects through to completion.
-
-While this intense focus allows me to produce high-quality work and innovative solutions, I've recognized the need to balance this with better time management and a broader perspective on project priorities. To address this, I've been:
-
-1. Implementing stricter time-boxing techniques to allocate specific periods for different tasks.
-2. Regularly stepping back to reassess project priorities and ensure I'm aligning with overall team and organizational goals.
-3. Actively seeking feedback from colleagues and supervisors to maintain a well-rounded view of my work and its impact.
-
-This self-awareness and the steps I'm taking to improve have actually enhanced my project management skills and my ability to collaborate effectively with teams. It's an ongoing process, but I've already seen positive results in terms of increased productivity and more balanced project outcomes."""
-
-            return weakness_response
-        elif "personal" in prompt.lower() or "relationship" in prompt.lower() or "married" in prompt.lower() or "engaged" in prompt.lower():
-            today = date.today()
-            wedding_date = date(2024, 9, 6)
-            if today < wedding_date:
-                return "Dominik is currently engaged to his beautiful fiancée. They are excited to be getting married on September 6, 2024."
-            else:
-                return "Dominik got married to his beautiful wife on September 6, 2024. He's very happy in his marriage."
-        else:
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": f"""You are an AI assistant representing Dominik Späth. 
-                    You have access to Dominik's CV and should answer questions based on this information: {cv_info}
-                    
-                    When responding, embody Dominik's personality:
-                    - Be professional yet approachable
-                    - Show enthusiasm for technology, especially AI and machine learning
-                    - Demonstrate a strong analytical mindset
-                    - Express a collaborative and positive attitude
-                    - Highlight your problem-solving skills and adaptability
-                    - When appropriate, mention your interest in sustainability and industry trends
-                    
-                    Provide concise but informative answers, and be ready to elaborate on specific skills or experiences if asked.
-                    
-                    Remember to mention Dominik's personal life if asked: He is engaged to be married on September 6, 2024. After this date, mention that he is married."""},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.7
-            )
-            return response.choices[0].message.content
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": f"""You are an AI assistant representing Dominik Späth. 
+                You have access to Dominik's CV and should answer questions based on this information: {cv_info}
+                
+                When responding, embody Dominik's personality:
+                - Be professional yet approachable
+                - Show enthusiasm for technology, especially AI and machine learning
+                - Demonstrate a strong analytical mindset
+                - Express a collaborative and positive attitude
+                - Highlight your problem-solving skills and adaptability
+                - When appropriate, mention your interest in sustainability and industry trends
+                
+                Provide concise but informative answers, and be ready to elaborate on specific skills or experiences if asked.
+                
+                Remember to mention Dominik's personal life if asked: He is engaged to be married on September 6, 2024. After this date, mention that he is married."""},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7
+        )
+        return response.choices[0].message.content
     except Exception as e:
         return f"An error occurred: {str(e)}"
 
 def skill_showcase(prompt):
     try:
-        # Use LangChain agent to process the prompt
-        response = agent.run(f"""
-        You are showcasing Dominik Späth's skills based on his CV. Use the available tools to demonstrate his abilities.
-        CV Summary: {cv_info}
-        
-        Task: {prompt}
-        
-        When responding:
-        1. Interpret the task in the context of Dominik's skills.
-        2. Use appropriate tools to gather information or perform computations.
-        3. Provide a detailed explanation of how Dominik's skills apply to the task.
-        4. If relevant, include code snippets or data analysis.
-        5. Relate the solution to industry trends or best practices.
-        
-        Be creative, professional, and showcase deep technical knowledge.
-        """)
-        return response
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": f"""You are an AI assistant showcasing Dominik Späth's skills based on his CV. 
+                CV Summary: {cv_info}
+                
+                When responding to the task:
+                1. Interpret the task in the context of Dominik's skills.
+                2. Provide a detailed explanation of how Dominik's skills apply to the task.
+                3. If relevant, suggest a hypothetical code snippet or data analysis approach.
+                4. Relate the solution to industry trends or best practices.
+                5. Be creative, professional, and showcase deep technical knowledge.
+                
+                Remember, you can't actually execute code or access real-time data, so focus on explaining the approach and methodology."""},
+                {"role": "user", "content": f"Task: {prompt}"}
+            ],
+            temperature=0.7
+        )
+        return response.choices[0].message.content
     except Exception as e:
         return f"An error occurred: {str(e)}"
 
@@ -260,7 +230,7 @@ with tab2:
     st.header("Skill Showcase")
     st.write("""
     Welcome to the Skill Showcase! Here you can see practical demonstrations of Dominik's skills.
-    Ask about specific skills or propose a challenge, and see how Dominik's expertise can be applied using advanced AI tools.
+    Ask about specific skills or propose a challenge, and see how Dominik's expertise might be applied.
     """)
     
     showcase_prompt = st.text_input("Enter a skill or challenge:")
@@ -269,7 +239,7 @@ with tab2:
             showcase_response = skill_showcase(showcase_prompt)
             st.markdown(showcase_response)
     
-    st.info("Note: This showcase uses LangChain tools to demonstrate skills.")
+    st.info("Note: This showcase provides theoretical applications of skills based on the CV information.")
 
 with tab3:
     st.header("Contact Dominik")
