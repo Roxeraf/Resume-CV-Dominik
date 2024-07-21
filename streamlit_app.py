@@ -7,6 +7,14 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, date
+import plotly.express as px
+import plotly.graph_objects as go
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+import json
 
 # Load environment variables
 load_dotenv()
@@ -115,6 +123,60 @@ def send_email(name, email, message):
         print(f"An error occurred: {e}")
         return False
 
+def generate_gantt_chart(df):
+    fig = px.timeline(df, x_start="Start", x_end="Finish", y="Task", color="Resource")
+    return fig
+
+def generate_flow_chart(steps):
+    fig = go.Figure(data=[go.Sankey(
+        node = dict(
+          pad = 15,
+          thickness = 20,
+          line = dict(color = "black", width = 0.5),
+          label = [step["name"] for step in steps],
+          color = "blue"
+        ),
+        link = dict(
+          source = [steps.index(step) for step in steps[:-1]],
+          target = [steps.index(step)+1 for step in steps[:-1]],
+          value = [1] * (len(steps) - 1)
+  ))])
+    fig.update_layout(title_text="Process Flow", font_size=10)
+    return fig
+
+def run_simple_ml(X, y):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    mse = mean_squared_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+    return mse, r2, model.coef_, model.intercept_
+
+def parse_ml_input(input_str):
+    try:
+        data = json.loads(input_str)
+        X = np.array(data['X']).reshape(-1, 1)
+        y = np.array(data['y'])
+        return X, y
+    except:
+        return None, None
+
+def parse_gantt_input(input_str):
+    try:
+        tasks = json.loads(input_str)
+        df = pd.DataFrame(tasks)
+        return df
+    except:
+        return None
+
+def parse_flow_input(input_str):
+    try:
+        steps = json.loads(input_str)
+        return steps
+    except:
+        return None
+
 def get_interactive_cv_response(prompt, conversation_history):
     try:
         messages = [
@@ -129,21 +191,23 @@ def get_interactive_cv_response(prompt, conversation_history):
             - Highlight Dominik's problem-solving skills and adaptability
             - When appropriate, mention his interest in sustainability and industry trends
             
-            If asked about specific skills or challenges:
-            1. Interpret the task in the context of Dominik's skills
-            2. Provide a detailed explanation of how Dominik's skills apply to the task
-            3. If relevant, suggest a hypothetical code snippet or data analysis approach
-            4. Relate the solution to industry trends or best practices
-            
+            You can also generate ML models, Gantt charts, and flow charts. When a user requests one of these, respond with the appropriate JSON format:
+
+            For ML models:
+            {{"type": "ml_model", "data": {{"X": [x1, x2, ...], "y": [y1, y2, ...]}}}}
+
+            For Gantt charts:
+            {{"type": "gantt_chart", "data": [{{"Task": "task1", "Start": "YYYY-MM-DD", "Finish": "YYYY-MM-DD", "Resource": "resource1"}}, ...]}}
+
+            For flow charts:
+            {{"type": "flow_chart", "data": [{{"name": "step1"}}, {{"name": "step2"}}, ...]}}
+
             Provide informative answers, and be ready to elaborate on specific skills or experiences.
             
             Remember to mention Dominik's personal life if asked: He is engaged to be married on September 6, 2024. After this date, mention that he is married."""}
         ]
         
-        # Add conversation history to messages
         messages.extend(conversation_history)
-        
-        # Add the new user prompt
         messages.append({"role": "user", "content": prompt})
         
         response = client.chat.completions.create(
@@ -159,16 +223,13 @@ def get_interactive_cv_response(prompt, conversation_history):
 st.set_page_config(page_title="Dominik Späth's Interactive CV", page_icon="📄", layout="wide")
 st.title("Dominik Späth's Interactive CV")
 
-# Create tabs for different sections
 tab1, tab2 = st.tabs(["Interactive CV Chat", "Contact"])
 
 with tab1:
     st.header("Chat with Dominik's AI Assistant")
     st.write("""
     Hello! I'm an AI assistant representing Dominik Späth. I can tell you about Dominik's professional experience, 
-    skills, and interests. Feel free to ask me anything about his career, propose challenges, or inquire about 
-    specific skills. I can provide detailed information and showcase how Dominik's expertise might be applied 
-    in various scenarios. What would you like to know?
+    skills, and interests. I can also generate ML models, Gantt charts, and flow charts. Feel free to ask me anything!
     """)
 
     # Display profile picture if available
@@ -192,29 +253,63 @@ with tab1:
     st.sidebar.write("Dominik Späth")
     st.sidebar.write("Born: March 30, 1998")
     st.sidebar.write("Email: dominik_justin@outlook.de")
-
-    # Initialize chat history
+    
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Display chat messages from history on rerun
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
+            if "type" in message.get("additional_content", {}):
+                if message["additional_content"]["type"] == "ml_model":
+                    fig = message["additional_content"]["figure"]
+                    st.plotly_chart(fig)
+                    st.write(f"Mean Squared Error: {message['additional_content']['mse']}")
+                    st.write(f"R-squared Score: {message['additional_content']['r2']}")
+                elif message["additional_content"]["type"] in ["gantt_chart", "flow_chart"]:
+                    fig = message["additional_content"]["figure"]
+                    st.plotly_chart(fig)
 
-    # React to user input
     if prompt := st.chat_input("What would you like to know or discuss?"):
-        # Display user message in chat message container
         st.chat_message("user").markdown(prompt)
-        # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": prompt})
 
         with st.chat_message("assistant"):
             response = get_interactive_cv_response(prompt, st.session_state.messages)
-            st.markdown(response)
+            try:
+                response_data = json.loads(response)
+                if response_data["type"] == "ml_model":
+                    X, y = parse_ml_input(json.dumps(response_data["data"]))
+                    if X is not None and y is not None:
+                        mse, r2, coef, intercept = run_simple_ml(X, y)
+                        fig = px.scatter(x=X.flatten(), y=y, trendline="ols")
+                        st.markdown("Here's the ML model you requested:")
+                        st.plotly_chart(fig)
+                        st.write(f"Mean Squared Error: {mse}")
+                        st.write(f"R-squared Score: {r2}")
+                        additional_content = {"type": "ml_model", "figure": fig, "mse": mse, "r2": r2}
+                elif response_data["type"] == "gantt_chart":
+                    df = parse_gantt_input(json.dumps(response_data["data"]))
+                    if df is not None:
+                        fig = generate_gantt_chart(df)
+                        st.markdown("Here's the Gantt chart you requested:")
+                        st.plotly_chart(fig)
+                        additional_content = {"type": "gantt_chart", "figure": fig}
+                elif response_data["type"] == "flow_chart":
+                    steps = parse_flow_input(json.dumps(response_data["data"]))
+                    if steps is not None:
+                        fig = generate_flow_chart(steps)
+                        st.markdown("Here's the flow chart you requested:")
+                        st.plotly_chart(fig)
+                        additional_content = {"type": "flow_chart", "figure": fig}
+                else:
+                    st.markdown(response)
+                    additional_content = {}
+            except json.JSONDecodeError:
+                st.markdown(response)
+                additional_content = {}
         
-        # Add assistant response to chat history
-        st.session_state.messages.append({"role": "assistant", "content": response})
+        st.session_state.messages.append({"role": "assistant", "content": response, "additional_content": additional_content})
 
 with tab2:
     st.header("Contact Dominik")
