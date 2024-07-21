@@ -222,18 +222,12 @@ with tab1:
 
         with st.chat_message("assistant"):
             response = get_interactive_cv_response(prompt, st.session_state.messages)
-            try:
-                response_data = json.loads(response)
-                if response_data["type"] == "flow_chart":
-                    steps = response_data["data"]
-                    fig = generate_flow_chart(steps)
-                    st.markdown("Here's the flow chart you requested:")
-                    st.plotly_chart(fig)
-                else:
-                    st.markdown(response)
-            except json.JSONDecodeError:
-                st.markdown(response)
-        
+            st.markdown(response)
+            # Check if the response contains any code snippets or specific formats and display them accordingly
+            if "```" in response:
+                code_snippet = response.split("```")[1]
+                st.code(code_snippet, language="python")
+
         st.session_state.messages.append({"role": "assistant", "content": response})
 
 with tab2:
@@ -264,5 +258,6 @@ st.sidebar.info(
 st.sidebar.warning(
     "Note: This is a demo application. For the most accurate and current information about Dominik's experience, please contact him directly."
 )
+
 
 
