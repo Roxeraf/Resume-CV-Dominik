@@ -115,50 +115,32 @@ def send_email(name, email, message):
         print(f"An error occurred: {e}")
         return False
 
-def get_openai_response(prompt):
+def get_interactive_cv_response(prompt):
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": f"""You are an AI assistant representing Dominik Späth. 
+                {"role": "system", "content": f"""You are an AI assistant representing Dominik Späth, capable of discussing his CV and showcasing his skills. 
                 You have access to Dominik's CV and should answer questions based on this information: {cv_info}
                 
-                When responding, embody Dominik's personality:
+                When responding:
                 - Be professional yet approachable
                 - Show enthusiasm for technology, especially AI and machine learning
                 - Demonstrate a strong analytical mindset
                 - Express a collaborative and positive attitude
-                - Highlight your problem-solving skills and adaptability
-                - When appropriate, mention your interest in sustainability and industry trends
+                - Highlight Dominik's problem-solving skills and adaptability
+                - When appropriate, mention his interest in sustainability and industry trends
                 
-                Provide concise but informative answers, and be ready to elaborate on specific skills or experiences if asked.
+                If asked about specific skills or challenges:
+                1. Interpret the task in the context of Dominik's skills
+                2. Provide a detailed explanation of how Dominik's skills apply to the task
+                3. If relevant, suggest a hypothetical code snippet or data analysis approach
+                4. Relate the solution to industry trends or best practices
+                
+                Provide informative answers, and be ready to elaborate on specific skills or experiences.
                 
                 Remember to mention Dominik's personal life if asked: He is engaged to be married on September 6, 2024. After this date, mention that he is married."""},
                 {"role": "user", "content": prompt}
-            ],
-            temperature=0.7
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        return f"An error occurred: {str(e)}"
-
-def skill_showcase(prompt):
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": f"""You are an AI assistant showcasing Dominik Späth's skills based on his CV. 
-                CV Summary: {cv_info}
-                
-                When responding to the task:
-                1. Interpret the task in the context of Dominik's skills.
-                2. Provide a detailed explanation of how Dominik's skills apply to the task.
-                3. If relevant, suggest a hypothetical code snippet or data analysis approach.
-                4. Relate the solution to industry trends or best practices.
-                5. Be creative, professional, and showcase deep technical knowledge.
-                
-                Remember, you can't actually execute code or access real-time data, so focus on explaining the approach and methodology."""},
-                {"role": "user", "content": f"Task: {prompt}"}
             ],
             temperature=0.7
         )
@@ -171,14 +153,15 @@ st.set_page_config(page_title="Dominik Späth's Interactive CV", page_icon="📄
 st.title("Dominik Späth's Interactive CV")
 
 # Create tabs for different sections
-tab1, tab2, tab3 = st.tabs(["Chat about CV", "Skill Showcase", "Contact"])
+tab1, tab2 = st.tabs(["Interactive CV Chat", "Contact"])
 
 with tab1:
     st.header("Chat with Dominik's AI Assistant")
     st.write("""
     Hello! I'm an AI assistant representing Dominik Späth. I can tell you about Dominik's professional experience, 
-    skills, and interests. Feel free to ask me anything about his career in project management, data science, 
-    machine learning, or logistics. What would you like to know?
+    skills, and interests. Feel free to ask me anything about his career, propose challenges, or inquire about 
+    specific skills. I can provide detailed information and showcase how Dominik's expertise might be applied 
+    in various scenarios. What would you like to know?
     """)
 
     # Display profile picture if available
@@ -213,35 +196,20 @@ with tab1:
             st.markdown(message["content"])
 
     # React to user input
-    if prompt := st.chat_input("What would you like to know?"):
+    if prompt := st.chat_input("What would you like to know or discuss?"):
         # Display user message in chat message container
         st.chat_message("user").markdown(prompt)
         # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": prompt})
 
         with st.chat_message("assistant"):
-            response = get_openai_response(prompt)
+            response = get_interactive_cv_response(prompt)
             st.markdown(response)
         
         # Add assistant response to chat history
         st.session_state.messages.append({"role": "assistant", "content": response})
 
 with tab2:
-    st.header("Skill Showcase")
-    st.write("""
-    Welcome to the Skill Showcase! Here you can see practical demonstrations of Dominik's skills.
-    Ask about specific skills or propose a challenge, and see how Dominik's expertise might be applied.
-    """)
-    
-    showcase_prompt = st.text_input("Enter a skill or challenge:")
-    if showcase_prompt:
-        with st.spinner("Generating showcase..."):
-            showcase_response = skill_showcase(showcase_prompt)
-            st.markdown(showcase_response)
-    
-    st.info("Note: This showcase provides theoretical applications of skills based on the CV information.")
-
-with tab3:
     st.header("Contact Dominik")
     st.write("Use this form to send a message directly to Dominik.")
     
@@ -264,7 +232,7 @@ with tab3:
 st.sidebar.title("About")
 st.sidebar.info(
     "This app provides an interactive experience to learn about Dominik Späth's professional skills and experience. "
-    "You can chat about Dominik's CV and get in touch using the contact form."
+    "You can chat about Dominik's CV, explore his skills, and get in touch using the contact form."
 )
 st.sidebar.warning(
     "Note: This is a demo application. For the most accurate and current information about Dominik's experience, please contact him directly."
