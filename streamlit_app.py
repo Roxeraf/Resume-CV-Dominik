@@ -18,6 +18,9 @@ import json
 import openpyxl
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
 import io
 
 # Load environment variables
@@ -216,23 +219,89 @@ def export_to_excel(data, chart_type):
     workbook.save(output)
     return output.getvalue()
 
-def export_to_pdf(fig, data, chart_type):
+def generate_pdf_from_json(data, chart_type):
     buffer = io.BytesIO()
-    c = canvas.Canvas(buffer, pagesize=letter)
-    width, height = letter
-
-    if chart_type in ["gantt", "flow"]:
-        img_data = fig.to_image(format="png")
-        c.drawImage(io.BytesIO(img_data), 50, height - 300, width=500, height=250)
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    elements = []
+    
+    styles = getSampleStyleSheet()
+    title_style = styles['Heading1']
+    normal_style = styles['Normal']
+    
+    if chart_type == "ml_model":
+        elements.append(Paragraph("ML Model Analysis", title_style))
+        elements.append(Paragraph(f"Mean Squared Error: {data['mse']:.4f}", normal_style))
+        elements.append(Paragraph(f"R-squared Score: {data['r2']:.4f}", normal_style))
         
-    if chart_type == "ml":
-        img_data = fig.to_image(format="png")
-        c.drawImage(io.BytesIO(img_data), 50, height - 300, width=500, height=250)
-        c.drawString(50, height - 350, f"Mean Squared Error: {data['mse']:.4f}")
-        c.drawString(50, height - 370, f"R-squared Score: {data['r2']:.4f}")
-
-    c.showPage()
-    c.save()
+        table_data = [['X', 'y']] + list(zip(data['X'], data['y']))
+        t = Table(table_data)
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 14),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 12),
+            ('TOPPADDING', (0, 1), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        elements.append(t)
+    
+    elif chart_type == "gantt_chart":
+        elements.append(Paragraph("Gantt Chart Data", title_style))
+        table_data = [['Task', 'Start', 'Finish', 'Resource']]
+        for task in data:
+            table_data.append([task['Task'], task['Start'], task['Finish'], task['Resource']])
+        t = Table(table_data)
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 14),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 12),
+            ('TOPPADDING', (0, 1), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        elements.append(t)
+    
+    elif chart_type == "flow_chart":
+        elements.append(Paragraph("Flow Chart Steps", title_style))
+        table_data = [['Step']]
+        for step in data:
+            table_data.append([step['name']])
+        t = Table(table_data)
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 14),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 12),
+            ('TOPPADDING', (0, 1), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        elements.append(t)
+    
+    doc.build(elements)
     buffer.seek(0)
     return buffer.getvalue()
 
@@ -356,7 +425,7 @@ with tab1:
                                 excel_data = export_to_excel(export_data, "ml")
                                 st.download_button(label="Download Excel", data=excel_data, file_name="ml_analysis.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
                             else:
-                                pdf_data = export_to_pdf(fig, export_data, "ml")
+                                pdf_data = generate_pdf_from_json(export_data, "ml_model")
                                 st.download_button(label="Download PDF", data=pdf_data, file_name="ml_analysis.pdf", mime="application/pdf")
                         
                         additional_content = {"type": "ml_model", "figure": fig, "mse": mse, "r2": r2}
@@ -373,7 +442,7 @@ with tab1:
                                 excel_data = export_to_excel(response_data["data"], "gantt")
                                 st.download_button(label="Download Excel", data=excel_data, file_name="gantt_chart.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
                             else:
-                                pdf_data = export_to_pdf(fig, response_data["data"], "gantt")
+                                pdf_data = generate_pdf_from_json(response_data["data"], "gantt_chart")
                                 st.download_button(label="Download PDF", data=pdf_data, file_name="gantt_chart.pdf", mime="application/pdf")
                         
                         additional_content = {"type": "gantt_chart", "figure": fig}
@@ -390,7 +459,7 @@ with tab1:
                                 excel_data = export_to_excel(response_data["data"], "flow")
                                 st.download_button(label="Download Excel", data=excel_data, file_name="flow_chart.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
                             else:
-                                pdf_data = export_to_pdf(fig, response_data["data"], "flow")
+                                pdf_data = generate_pdf_from_json(response_data["data"], "flow_chart")
                                 st.download_button(label="Download PDF", data=pdf_data, file_name="flow_chart.pdf", mime="application/pdf")
                         
                         additional_content = {"type": "flow_chart", "figure": fig}
