@@ -176,7 +176,7 @@ This self-awareness and the steps I'm taking to improve have actually enhanced m
 st.title("Dominik Späth's Interactive CV")
 
 # Create tabs for different sections
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["Chat about CV", "Project Management App", "Data Science App", "Logistics App", "Contact"])
+tab1, tab2 = st.tabs(["Chat about CV", "Contact"])
 
 with tab1:
     st.header("Chat with Dominik's AI Assistant")
@@ -206,12 +206,6 @@ with tab1:
     st.sidebar.write("Dominik Späth")
     st.sidebar.write("Born: March 30, 1998")
     st.sidebar.write("Email: dominik_justin@outlook.de")
-    today = date.today()
-    wedding_date = date(2024, 9, 6)
-    if today < wedding_date:
-        st.sidebar.write("Status: Engaged")
-    else:
-        st.sidebar.write("Status: Married")
 
     # Initialize chat history
     if "messages" not in st.session_state:
@@ -237,27 +231,6 @@ with tab1:
         st.session_state.messages.append({"role": "assistant", "content": response})
 
 with tab2:
-    st.header("Project Management Application")
-    st.write("This application showcases Dominik's project management skills.")
-    st.info("Application under development. Check back soon for interactive project management tools!")
-    if st.button("Visit Project Management App"):
-        st.write("Redirecting to Project Management App...")
-
-with tab3:
-    st.header("Data Science Application")
-    st.write("This application demonstrates Dominik's data science and machine learning capabilities.")
-    st.info("Application under development. Check back soon for data analysis and ML demos!")
-    if st.button("Visit Data Science App"):
-        st.write("Redirecting to Data Science App...")
-
-with tab4:
-    st.header("Logistics Application")
-    st.write("This application showcases Dominik's expertise in logistics and supply chain management.")
-    st.info("Application under development. Check back soon for supply chain optimization tools!")
-    if st.button("Visit Logistics App"):
-        st.write("Redirecting to Logistics App...")
-
-with tab5:
     st.header("Contact Dominik")
     st.write("Use this form to send a message directly to Dominik.")
     
@@ -280,8 +253,7 @@ with tab5:
 st.sidebar.title("About")
 st.sidebar.info(
     "This app provides an interactive experience to learn about Dominik Späth's professional skills and experience. "
-    "You can chat about Dominik's CV and explore specialized applications showcasing his expertise in "
-    "project management, data science, and logistics."
+    "You can chat about Dominik's CV and get in touch using the contact form."
 )
 st.sidebar.warning(
     "Note: This is a demo application. For the most accurate and current information about Dominik's experience, please contact him directly."
