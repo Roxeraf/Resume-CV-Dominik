@@ -118,7 +118,7 @@ def get_image_base64(image_path):
 def get_openai_response(prompt):
     try:
         if "contact" in prompt.lower() or "get in touch" in prompt.lower():
-            return "If you'd like to get in touch with Dominik, please use the contact form below. You can leave your message and contact information there, and Dominik will get back to you soon."
+            return "If you'd like to get in touch with Dominik, please use the 'Contact' option in the menu. You can leave your message and contact information there, and Dominik will get back to you soon."
         elif "weakness" in prompt.lower() or "weaknesses" in prompt.lower():
             weakness_response = """One of my main areas for improvement is my tendency to become deeply engrossed in projects, sometimes to the point where I may lose track of time or overlook other tasks. This stems from my passion for problem-solving and my drive to see projects through to completion.
 
@@ -157,7 +157,6 @@ This self-awareness and the steps I'm taking to improve have actually enhanced m
 
 # Main app
 st.set_page_config(page_title="Dominik Späth's Interactive CV", page_icon="📄", layout="wide")
-st.title("Dominik Späth's Interactive CV")
 
 # Sidebar
 profile_pic_base64 = get_image_base64("dominik_profile.jpg")
@@ -171,58 +170,63 @@ st.sidebar.write("Email: dominik_justin@outlook.de")
 st.sidebar.title("About")
 st.sidebar.info(
     "This app provides an interactive experience to learn about Dominik Späth's professional skills and experience. "
-    "You can chat about Dominik's CV and get in touch using the contact form below."
+    "You can chat about Dominik's CV and get in touch using the contact form in the menu."
 )
 st.sidebar.warning(
     "Note: This is a demo application. For the most accurate and current information about Dominik's experience, please contact him directly."
 )
 
-# Main content
-st.header("Chat with Dominik's AI Assistant")
-st.write("""
-Hello! I'm an AI assistant representing Dominik Späth. I can tell you about Dominik's professional experience, 
-skills, and interests. Feel free to ask me anything about his career in project management, data science, 
-machine learning, or logistics. What would you like to know?
-""")
+# Menu
+menu = ["Chat", "Contact"]
+choice = st.sidebar.selectbox("Menu", menu)
 
-# Initialize chat history
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+if choice == "Chat":
+    st.title("Dominik Späth's Interactive CV")
+    st.header("Chat with Dominik's AI Assistant")
+    st.write("""
+    Hello! I'm an AI assistant representing Dominik Späth. I can tell you about Dominik's professional experience, 
+    skills, and interests. Feel free to ask me anything about his career in project management, data science, 
+    machine learning, or logistics. What would you like to know?
+    """)
 
-# Display chat messages from history on rerun
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+    # Initialize chat history
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
-# React to user input
-if prompt := st.chat_input("What would you like to know?"):
-    # Display user message in chat message container
-    st.chat_message("user").markdown(prompt)
-    # Add user message to chat history
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    # Display chat messages from history on rerun
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-    with st.chat_message("assistant"):
-        response = get_openai_response(prompt)
-        st.markdown(response)
-    
-    # Add assistant response to chat history
-    st.session_state.messages.append({"role": "assistant", "content": response})
+    # React to user input
+    if prompt := st.chat_input("What would you like to know?"):
+        # Display user message in chat message container
+        st.chat_message("user").markdown(prompt)
+        # Add user message to chat history
+        st.session_state.messages.append({"role": "user", "content": prompt})
 
-# Contact Form
-st.header("Contact Dominik")
-st.write("Use this form to send a message directly to Dominik.")
+        with st.chat_message("assistant"):
+            response = get_openai_response(prompt)
+            st.markdown(response)
+        
+        # Add assistant response to chat history
+        st.session_state.messages.append({"role": "assistant", "content": response})
 
-with st.form("contact_form"):
-    name = st.text_input("Your Name")
-    email = st.text_input("Your Email")
-    message = st.text_area("Your Message")
-    submit_button = st.form_submit_button("Send Message")
+elif choice == "Contact":
+    st.title("Contact Dominik")
+    st.write("Use this form to send a message directly to Dominik.")
 
-if submit_button:
-    if name and email and message:
-        if send_email(name, email, message):
-            st.success("Your message has been sent successfully!")
+    with st.form("contact_form"):
+        name = st.text_input("Your Name")
+        email = st.text_input("Your Email")
+        message = st.text_area("Your Message")
+        submit_button = st.form_submit_button("Send Message")
+
+    if submit_button:
+        if name and email and message:
+            if send_email(name, email, message):
+                st.success("Your message has been sent successfully!")
+            else:
+                st.error("There was an error sending your message. Please try again later.")
         else:
-            st.error("There was an error sending your message. Please try again later.")
-    else:
-        st.warning("Please fill out all fields before sending.")
+            st.warning("Please fill out all fields before sending.")
