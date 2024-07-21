@@ -15,6 +15,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 import json
+import openpyxl
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+import io
 
 # Load environment variables
 load_dotenv()
@@ -177,6 +181,61 @@ def parse_flow_input(input_str):
     except:
         return None
 
+def export_to_excel(data, chart_type):
+    output = io.BytesIO()
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    
+    if chart_type == "gantt":
+        sheet.title = "Gantt Chart Data"
+        headers = ["Task", "Start", "Finish", "Resource"]
+        for col, header in enumerate(headers, start=1):
+            sheet.cell(row=1, column=col, value=header)
+        for row, task in enumerate(data, start=2):
+            sheet.cell(row=row, column=1, value=task['Task'])
+            sheet.cell(row=row, column=2, value=task['Start'])
+            sheet.cell(row=row, column=3, value=task['Finish'])
+            sheet.cell(row=row, column=4, value=task['Resource'])
+    elif chart_type == "flow":
+        sheet.title = "Flow Chart Data"
+        sheet.cell(row=1, column=1, value="Step")
+        for row, step in enumerate(data, start=2):
+            sheet.cell(row=row, column=1, value=step['name'])
+    elif chart_type == "ml":
+        sheet.title = "ML Analysis Data"
+        sheet.cell(row=1, column=1, value="X")
+        sheet.cell(row=1, column=2, value="y")
+        for row, (x, y) in enumerate(zip(data['X'], data['y']), start=2):
+            sheet.cell(row=row, column=1, value=x)
+            sheet.cell(row=row, column=2, value=y)
+        sheet.cell(row=1, column=4, value="MSE")
+        sheet.cell(row=2, column=4, value=data['mse'])
+        sheet.cell(row=1, column=5, value="R-squared")
+        sheet.cell(row=2, column=5, value=data['r2'])
+    
+    workbook.save(output)
+    return output.getvalue()
+
+def export_to_pdf(fig, data, chart_type):
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+
+    if chart_type in ["gantt", "flow"]:
+        img_data = fig.to_image(format="png")
+        c.drawImage(io.BytesIO(img_data), 50, height - 300, width=500, height=250)
+        
+    if chart_type == "ml":
+        img_data = fig.to_image(format="png")
+        c.drawImage(io.BytesIO(img_data), 50, height - 300, width=500, height=250)
+        c.drawString(50, height - 350, f"Mean Squared Error: {data['mse']:.4f}")
+        c.drawString(50, height - 370, f"R-squared Score: {data['r2']:.4f}")
+
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    return buffer.getvalue()
+
 def get_interactive_cv_response(prompt, conversation_history):
     try:
         messages = [
@@ -194,13 +253,15 @@ def get_interactive_cv_response(prompt, conversation_history):
             You can also generate ML models, Gantt charts, and flow charts. When a user requests one of these, respond with the appropriate JSON format:
 
             For ML models:
-            {{"type": "ml_model", "data": {{"X": [x1, x2, ...], "y": [y1, y2, ...]}}}}
+            {{"type": "ml_model", "data": {{"X": [x1, x2, ...], "y": [y1, y2, ...]}}, "export": "excel/pdf"}}
 
             For Gantt charts:
-            {{"type": "gantt_chart", "data": [{{"Task": "task1", "Start": "YYYY-MM-DD", "Finish": "YYYY-MM-DD", "Resource": "resource1"}}, ...]}}
+            {{"type": "gantt_chart", "data": [{{"Task": "task1", "Start": "YYYY-MM-DD", "Finish": "YYYY-MM-DD", "Resource": "resource1"}}, ...], "export": "excel/pdf"}}
 
             For flow charts:
-            {{"type": "flow_chart", "data": [{{"name": "step1"}}, {{"name": "step2"}}, ...]}}
+            {{"type": "flow_chart", "data": [{{"name": "step1"}}, {{"name": "step2"}}, ...], "export": "excel/pdf"}}
+
+            Include the "export" key with value "excel" or "pdf" based on the user's request.
 
             Provide informative answers, and be ready to elaborate on specific skills or experiences.
             
@@ -287,6 +348,17 @@ with tab1:
                         st.plotly_chart(fig)
                         st.write(f"Mean Squared Error: {mse}")
                         st.write(f"R-squared Score: {r2}")
+                        
+                        export_format = response_data.get("export", "").lower()
+                        if export_format in ["excel", "pdf"]:
+                            export_data = {"X": X.flatten().tolist(), "y": y.tolist(), "mse": mse, "r2": r2}
+                            if export_format == "excel":
+                                excel_data = export_to_excel(export_data, "ml")
+                                st.download_button(label="Download Excel", data=excel_data, file_name="ml_analysis.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                            else:
+                                pdf_data = export_to_pdf(fig, export_data, "ml")
+                                st.download_button(label="Download PDF", data=pdf_data, file_name="ml_analysis.pdf", mime="application/pdf")
+                        
                         additional_content = {"type": "ml_model", "figure": fig, "mse": mse, "r2": r2}
                 elif response_data["type"] == "gantt_chart":
                     df = parse_gantt_input(json.dumps(response_data["data"]))
@@ -294,6 +366,16 @@ with tab1:
                         fig = generate_gantt_chart(df)
                         st.markdown("Here's the Gantt chart you requested:")
                         st.plotly_chart(fig)
+                        
+                        export_format = response_data.get("export", "").lower()
+                        if export_format in ["excel", "pdf"]:
+                            if export_format == "excel":
+                                excel_data = export_to_excel(response_data["data"], "gantt")
+                                st.download_button(label="Download Excel", data=excel_data, file_name="gantt_chart.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                            else:
+                                pdf_data = export_to_pdf(fig, response_data["data"], "gantt")
+                                st.download_button(label="Download PDF", data=pdf_data, file_name="gantt_chart.pdf", mime="application/pdf")
+                        
                         additional_content = {"type": "gantt_chart", "figure": fig}
                 elif response_data["type"] == "flow_chart":
                     steps = parse_flow_input(json.dumps(response_data["data"]))
@@ -301,6 +383,16 @@ with tab1:
                         fig = generate_flow_chart(steps)
                         st.markdown("Here's the flow chart you requested:")
                         st.plotly_chart(fig)
+                        
+                        export_format = response_data.get("export", "").lower()
+                        if export_format in ["excel", "pdf"]:
+                            if export_format == "excel":
+                                excel_data = export_to_excel(response_data["data"], "flow")
+                                st.download_button(label="Download Excel", data=excel_data, file_name="flow_chart.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                            else:
+                                pdf_data = export_to_pdf(fig, response_data["data"], "flow")
+                                st.download_button(label="Download PDF", data=pdf_data, file_name="flow_chart.pdf", mime="application/pdf")
+                        
                         additional_content = {"type": "flow_chart", "figure": fig}
                 else:
                     st.markdown(response)
