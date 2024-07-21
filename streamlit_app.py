@@ -30,12 +30,11 @@ Education:
 - Ausbildung zur Fachkraft für Lagerlogistik, Simona AG, Kirn, 08.2014 - 06.2017
 
 Experience:
-- Projektleitung Machine Learning at Polytec-Group, Weierbach, 08.2023 - present
-  • Leading machine learning projects in the automotive industry
-  • Implementing AI solutions for quality control and process optimization
 - Logistics Planning Specialist at Polytec-Group, Weierbach, 04.2024 - present
   • Optimizing supply chain processes using data-driven approaches
   • Developing and implementing logistics strategies
+  • Leading machine learning projects in the automotive industry
+  • Implementing AI solutions for quality control and process optimization
 - Packaging Planner at Polytec-Group, Weierbach, 04.2023 - 03.2024
   • Designing efficient packaging solutions for automotive components
   • Reducing packaging costs while improving product protection
