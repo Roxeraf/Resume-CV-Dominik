@@ -3,6 +3,8 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import os
 import base64
+import smtplib
+from email.message import EmailMessage
 
 # Load environment variables
 load_dotenv()
@@ -13,6 +15,9 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # Your CV information
 cv_info = """
 Name: Dominik Justin Späth
+Birthday: March 30, 1998
+Email: dominik_justin@outlook.de
+
 Education: 
 - Studium Wirtschaftsinformatik, Euro FH, 03.2022 - present
 - Ausbildung zur Fachkraft für Lagerlogistik, Simona AG, Kirn, 08.2014 - 06.2017
@@ -88,9 +93,36 @@ def get_image_base64(image_path):
 # Try to load the profile picture
 profile_pic_base64 = get_image_base64("dominik_profile.jpg")
 
+def send_email(name, email, message):
+    # Your email configuration
+    smtp_server = "smtp.office365.com"  # For Outlook
+    smtp_port = 587  # For TLS
+    sender_email = "dominik_justin@outlook.de"  # Your email address
+    sender_password = st.secrets["EMAIL_PASSWORD"]  # Get password from Streamlit secrets
+
+    # Create the email content
+    msg = EmailMessage()
+    msg.set_content(f"Name: {name}\nEmail: {email}\n\nMessage:\n{message}")
+    msg['Subject'] = f"New contact from {name} via Interactive CV"
+    msg['From'] = sender_email
+    msg['To'] = sender_email  # Sending to yourself
+
+    # Send the email
+    try:
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(sender_email, sender_password)
+            server.send_message(msg)
+        return True
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return False
+
 def get_openai_response(prompt):
     try:
-        if "weakness" in prompt.lower() or "weaknesses" in prompt.lower():
+        if "contact" in prompt.lower() or "get in touch" in prompt.lower():
+            return "If you'd like to get in touch with Dominik, please use the contact form in the 'Contact' tab. You can leave your message and contact information there, and Dominik will get back to you soon."
+        elif "weakness" in prompt.lower() or "weaknesses" in prompt.lower():
             weakness_response = """One of my main areas for improvement is my tendency to become deeply engrossed in projects, sometimes to the point where I may lose track of time or overlook other tasks. This stems from my passion for problem-solving and my drive to see projects through to completion.
 
 While this intense focus allows me to produce high-quality work and innovative solutions, I've recognized the need to balance this with better time management and a broader perspective on project priorities. To address this, I've been:
@@ -104,7 +136,7 @@ This self-awareness and the steps I'm taking to improve have actually enhanced m
             return weakness_response
         else:
             response = client.chat.completions.create(
-                model="gpt-4o-mini",  # Updated model name
+                model="gpt-4o-mini",  # Make sure this model name is correct
                 messages=[
                     {"role": "system", "content": f"""You are an AI assistant representing Dominik Späth. 
                     You have access to Dominik's CV and should answer questions based on this information: {cv_info}
@@ -130,7 +162,7 @@ This self-awareness and the steps I'm taking to improve have actually enhanced m
 st.title("Dominik Späth's Interactive CV")
 
 # Create tabs for different sections
-tab1, tab2, tab3, tab4 = st.tabs(["Chat about CV", "Project Management App", "Data Science App", "Logistics App"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["Chat about CV", "Project Management App", "Data Science App", "Logistics App", "Contact"])
 
 with tab1:
     st.header("Chat with Dominik's AI Assistant")
@@ -158,6 +190,8 @@ with tab1:
             unsafe_allow_html=True
         )
     st.sidebar.write("Dominik Späth")
+    st.sidebar.write("Born: March 30, 1998")
+    st.sidebar.write("Email: dominik_justin@outlook.de")
 
     # Initialize chat history
     if "messages" not in st.session_state:
@@ -188,8 +222,6 @@ with tab2:
     st.info("Application under development. Check back soon for interactive project management tools!")
     if st.button("Visit Project Management App"):
         st.write("Redirecting to Project Management App...")
-        # In a real scenario, you would use st.markdown to create a hyperlink
-        # st.markdown("[Go to Project Management App](https://your-project-management-app-url)")
 
 with tab3:
     st.header("Data Science Application")
@@ -197,7 +229,6 @@ with tab3:
     st.info("Application under development. Check back soon for data analysis and ML demos!")
     if st.button("Visit Data Science App"):
         st.write("Redirecting to Data Science App...")
-        # st.markdown("[Go to Data Science App](https://your-data-science-app-url)")
 
 with tab4:
     st.header("Logistics Application")
@@ -205,7 +236,25 @@ with tab4:
     st.info("Application under development. Check back soon for supply chain optimization tools!")
     if st.button("Visit Logistics App"):
         st.write("Redirecting to Logistics App...")
-        # st.markdown("[Go to Logistics App](https://your-logistics-app-url)")
+
+with tab5:
+    st.header("Contact Dominik")
+    st.write("Use this form to send a message directly to Dominik.")
+    
+    with st.form("contact_form"):
+        name = st.text_input("Your Name")
+        email = st.text_input("Your Email")
+        message = st.text_area("Your Message")
+        submit_button = st.form_submit_button("Send Message")
+
+    if submit_button:
+        if name and email and message:
+            if send_email(name, email, message):
+                st.success("Your message has been sent successfully!")
+            else:
+                st.error("There was an error sending your message. Please try again later.")
+        else:
+            st.warning("Please fill out all fields before sending.")
 
 # Add information about the app
 st.sidebar.title("About")
