@@ -8,20 +8,27 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, date
 
+from langchain.agents import load_tools
+from langchain.agents import initialize_agent
+from langchain.agents import AgentType
+from langchain.llms import OpenAI as LangChainOpenAI
+
 # Load environment variables
 load_dotenv()
 
 # Set up OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# Set up LangChain tools
+llm = LangChainOpenAI(temperature=0, model_name="gpt-4o-mini")
+tools = load_tools(["python_repl", "requests_all", "terminal"], llm=llm)
+agent = initialize_agent(tools, llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True)
+
 # Your CV information
 cv_info = """
 Name: Dominik Justin Späth
 Birthday: March 30, 1998
 Email: dominik_justin@outlook.de
-
-Personal:
-- Engaged to be married on September 6, 2024
 
 Education: 
 - Studium Wirtschaftsinformatik, Euro FH, 03.2022 - present
@@ -95,15 +102,11 @@ def get_image_base64(image_path):
         st.warning(f"Profile image not found: {image_path}")
         return None
 
-# Try to load the profile picture
-profile_pic_base64 = get_image_base64("dominik_profile.jpg")
-
 def send_email(name, email, message):
     sender_email = "dominikjustinspath@gmail.com"
     sender_password = st.secrets["GMAIL_APP_PASSWORD"]
     receiver_email = "dominik_justin@outlook.de"
 
-    # Create the email content
     msg = MIMEMultipart()
     msg['From'] = sender_email
     msg['To'] = receiver_email
@@ -112,7 +115,6 @@ def send_email(name, email, message):
     body = f"Name: {name}\nEmail: {email}\n\nMessage:\n{message}"
     msg.attach(MIMEText(body, 'plain'))
 
-    # Send the email
     try:
         with smtplib.SMTP('smtp.gmail.com', 587) as server:
             server.starttls()
@@ -148,7 +150,7 @@ This self-awareness and the steps I'm taking to improve have actually enhanced m
                 return "Dominik got married to his beautiful wife on September 6, 2024. He's very happy in his marriage."
         else:
             response = client.chat.completions.create(
-                model="gpt-4o-mini",  # Make sure this model name is correct
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": f"""You are an AI assistant representing Dominik Späth. 
                     You have access to Dominik's CV and should answer questions based on this information: {cv_info}
@@ -172,11 +174,34 @@ This self-awareness and the steps I'm taking to improve have actually enhanced m
     except Exception as e:
         return f"An error occurred: {str(e)}"
 
+def skill_showcase(prompt):
+    try:
+        # Use LangChain agent to process the prompt
+        response = agent.run(f"""
+        You are showcasing Dominik Späth's skills based on his CV. Use the available tools to demonstrate his abilities.
+        CV Summary: {cv_info}
+        
+        Task: {prompt}
+        
+        When responding:
+        1. Interpret the task in the context of Dominik's skills.
+        2. Use appropriate tools to gather information or perform computations.
+        3. Provide a detailed explanation of how Dominik's skills apply to the task.
+        4. If relevant, include code snippets or data analysis.
+        5. Relate the solution to industry trends or best practices.
+        
+        Be creative, professional, and showcase deep technical knowledge.
+        """)
+        return response
+    except Exception as e:
+        return f"An error occurred: {str(e)}"
+
 # Streamlit UI
+st.set_page_config(page_title="Dominik Späth's Interactive CV", page_icon="📄", layout="wide")
 st.title("Dominik Späth's Interactive CV")
 
 # Create tabs for different sections
-tab1, tab2 = st.tabs(["Chat about CV", "Contact"])
+tab1, tab2, tab3 = st.tabs(["Chat about CV", "Skill Showcase", "Contact"])
 
 with tab1:
     st.header("Chat with Dominik's AI Assistant")
@@ -187,6 +212,7 @@ with tab1:
     """)
 
     # Display profile picture if available
+    profile_pic_base64 = get_image_base64("dominik_profile.jpg")
     if profile_pic_base64:
         st.sidebar.markdown(
             f"""
@@ -231,6 +257,21 @@ with tab1:
         st.session_state.messages.append({"role": "assistant", "content": response})
 
 with tab2:
+    st.header("Skill Showcase")
+    st.write("""
+    Welcome to the Skill Showcase! Here you can see practical demonstrations of Dominik's skills.
+    Ask about specific skills or propose a challenge, and see how Dominik's expertise can be applied using advanced AI tools.
+    """)
+    
+    showcase_prompt = st.text_input("Enter a skill or challenge:")
+    if showcase_prompt:
+        with st.spinner("Generating showcase..."):
+            showcase_response = skill_showcase(showcase_prompt)
+            st.markdown(showcase_response)
+    
+    st.info("Note: This showcase uses LangChain tools to demonstrate skills.")
+
+with tab3:
     st.header("Contact Dominik")
     st.write("Use this form to send a message directly to Dominik.")
     
