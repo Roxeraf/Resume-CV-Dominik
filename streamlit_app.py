@@ -14,49 +14,69 @@ load_dotenv()
 # Set up OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Your CV information
+# Your updated CV information
 cv_info = """
 Name: Dominik Justin Späth
 Birthday: March 30, 1998
 Email: dominik_justin@outlook.de
 
-Education: 
+Education:
 - Studium Wirtschaftsinformatik, Euro FH, 03.2022 - present
 - Ausbildung zur Fachkraft für Lagerlogistik, Simona AG, Kirn, 08.2014 - 06.2017
+- Realschule plus, Kirn, 08.2008 - 07.2014 (Mittlere Reife)
 
 Experience:
 - Projektleitung Machine Learning at Polytec-Group, Weierbach, 08.2023 - present
-  • Leading machine learning projects in the automotive industry
-  • Implementing AI solutions for quality control and process optimization
-- Logistics Planning Specialist at Polytec-Group, Weierbach, 04.2024 - present
-  • Optimizing supply chain processes using data-driven approaches
-  • Developing and implementing logistics strategies
-- Packaging Planner at Polytec-Group, Weierbach, 04.2023 - 03.2024
-  • Designing efficient packaging solutions for automotive components
-  • Reducing packaging costs while improving product protection
+  • Leading machine learning projects with full budget responsibility
+  • Implementing ML technologies in the painting process, significantly improving the "First Run Rate"
+  • Coordinating between project teams and external service providers
+  • Creating project reports for board and management
+  • Developing and determining internal KPIs
+  • Process development and optimization in the context of ML integration
+
+- Logistics Planning Specialist at Polytec-Group, Weierbach, 04.2023 - present
+  • Developing and optimizing end-to-end logistics concepts
+  • Leading interdisciplinary teams and managing resource allocation in projects
+  • Developing global standard processes and implementing local process variations
+  • Ensuring structured documentation and quality management
+  • Proactive risk identification and management
+
 - Projektleitung at Manpaz Limited, Santiago de Chile, 08.2022 - 31.01.2023
-  • Led international projects in a Spanish-speaking environment
-  • Gained valuable experience in cross-cultural communication
-- Lagerkoordinator at Simona AG, Kirn, 06.2017 - 07.2022
-  • Managed warehouse operations and inventory control
-  • Implemented lean management principles to improve efficiency
+  • Acquiring new orders and building customer relationships
+  • Developing and optimizing production processes
+  • Leading outsourcing projects to China, leveraging free trade agreements
+  • Managing project budgets and optimizing resource utilization
+
+- Fachkraft für Lagerlogistik at Simona AG, Kirn, 06.2017 - 07.2022
+  • Versatile role in all warehouse areas, focusing on goods receipt, dispatch, and storage
+  • Operating technical commissioning systems
+  • Contributing to quality control, inventory management, and stocktaking
+  • Active involvement in improving the WACOS warehouse management software
+  • Implementing new packaging standards and optimizing commissioning processes
+  • Serving as a safety officer, achieving over 1000 consecutive accident-free days
 
 Skills:
-- Project Management: Agile methodologies, Scrum, Kanban, risk management, stakeholder communication
-- Data Science: Python, SQL, data visualization (Tableau, Power BI), statistical analysis
-- Machine Learning: TensorFlow, PyTorch, scikit-learn, deep learning, computer vision
-- Logistics: Supply chain optimization, inventory management, warehouse management systems (WMS)
-- Supply Chain Management: Demand forecasting, route optimization, logistics network design
-- Languages: German (native), English (fluent), Spanish (conversational), Portuguese (basic)
+- Project Management: Budget responsibility, team leadership, risk management, KPI development
+- Machine Learning: Implementation in industrial processes, particularly in painting processes
+- Logistics: End-to-end logistics concept development, process optimization, supply chain management
+- Data Analysis: Developing and determining KPIs, creating project reports
+- Quality Management: Structured documentation, continuous improvement processes
+- Safety Management: Experience as a safety officer in industrial settings
 
 Technical Skills:
-- Programming: Python, SQL, Java (basic)
-- Tools: Git, Docker, Kubernetes, AWS, Azure
-- Databases: MySQL, PostgreSQL, MongoDB
-- BI Tools: Tableau, Power BI, QlikView
-- AI/ML: Agentic frameworks, prompt engineering, training LLM models
-- ERP Systems: SAP
-- Data Science: Python, SQL, data visualization (Tableau, Power BI), statistical analysis
+- ERP Systems: SAP R3/SAP 4 Hana
+- CAD Software: Creo CAD, Solidworks CAD
+- Data Analysis: MS Power BI/Power Apps
+- Project Management Tools: MS-Project, MS-Azure, Asana, Jira
+- Programming: Python
+- Warehouse Management: WACOS, Ipolog
+- AI Frameworks: CrewAI
+
+Languages:
+- German: Native
+- English: Fluent
+- Spanish: Basic knowledge
+- Portuguese: Basic knowledge
 
 Soft Skills:
 - Strong analytical and problem-solving abilities
@@ -67,21 +87,18 @@ Soft Skills:
 
 Personality Traits:
 - Proactive and self-motivated
-- Curious and always eager to learn new technologies
+- Hands-on mentality and technical understanding
+- Intercultural competence
 - Collaborative team player with a positive attitude
 - Thrives in fast-paced, challenging environments
-- Values work-life balance and practices mindfulness
-
-Interests:
-- Staying up-to-date with the latest trends in AI and machine learning
-- Contributing to open-source projects in logistics and supply chain optimization
-- Mentoring junior data scientists and logistics professionals
-- Exploring the intersection of sustainability and supply chain management
 
 Career Goals:
-- To become a thought leader in the application of AI in logistics and supply chain management
-- To drive digital transformation in the automotive industry through innovative AI solutions
-- To contribute to the development of more sustainable and efficient logistics practices
+- To drive innovation in logistics and production processes through machine learning and AI
+- To contribute to sustainable and efficient industrial practices
+- To continue developing expertise in project management and team leadership
+
+Personal:
+- Married
 """
 
 def get_image_base64(image_path):
@@ -137,7 +154,7 @@ def get_interactive_cv_response(prompt, conversation_history):
             
             Provide informative answers, and be ready to elaborate on specific skills or experiences.
             
-            Remember to mention Dominik's personal life if asked: He is engaged to be married on September 6, 2024. After this date, mention that he is married."""}
+            Remember to mention that Dominik is married if asked about his personal life."""}
         ]
         
         # Add conversation history to messages
@@ -147,7 +164,7 @@ def get_interactive_cv_response(prompt, conversation_history):
         messages.append({"role": "user", "content": prompt})
         
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4-1106-preview",
             messages=messages,
             temperature=0.7
         )
@@ -166,9 +183,10 @@ with tab1:
     st.header("Chat with Dominik's AI Assistant")
     st.write("""
     Hello! I'm an AI assistant representing Dominik Späth. I can tell you about Dominik's professional experience, 
-    skills, and interests. Feel free to ask me anything about his career, propose challenges, or inquire about 
-    specific skills. I can provide detailed information and showcase how Dominik's expertise might be applied 
-    in various scenarios. What would you like to know?
+    skills, and interests, with a focus on his current roles in Machine Learning Project Management and Logistics Planning. 
+    Feel free to ask me anything about his career, propose challenges, or inquire about 
+    specific skills in areas like machine learning, logistics optimization, or project management. 
+    What would you like to know?
     """)
 
     # Display profile picture if available
@@ -244,5 +262,4 @@ st.sidebar.info(
 st.sidebar.warning(
     "Note: This is a demo application. For the most accurate and current information about Dominik's experience, please contact him directly."
 )
-
 
