@@ -6,7 +6,6 @@ import base64
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from datetime import datetime, date
 
 # Load environment variables
 load_dotenv()
@@ -174,6 +173,35 @@ def get_interactive_cv_response(prompt, conversation_history):
 
 # Streamlit UI
 st.set_page_config(page_title="Dominik Späth's Interactive CV", page_icon="📄", layout="wide")
+
+# Custom CSS to create a static input field at the bottom
+st.markdown("""
+<style>
+.stApp {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+.main {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+.chat-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+.input-container {
+    position: sticky;
+    bottom: 0;
+    background-color: white;
+    padding: 10px;
+    border-top: 1px solid #e0e0e0;
+}
+</style>
+""", unsafe_allow_html=True)
+
 st.title("Dominik Späth's Interactive CV")
 
 # Create tabs for different sections
@@ -181,15 +209,49 @@ tab1, tab2 = st.tabs(["Interactive CV Chat", "Contact"])
 
 with tab1:
     st.header("Chat with Dominik's AI Assistant")
-    st.write("""
-    Hello! I'm an AI assistant representing Dominik Späth. I can tell you about Dominik's professional experience, 
-    skills, and interests, with a focus on his current roles in Machine Learning Project Management and Logistics Planning. 
-    Feel free to ask me anything about his career, propose challenges, or inquire about 
-    specific skills in areas like machine learning, logistics optimization, or project management. 
-    What would you like to know?
-    """)
+    
+    # Chat container
+    chat_container = st.container()
+    
+    with chat_container:
+        st.write("""
+        Hello! I'm an AI assistant representing Dominik Späth. I can tell you about Dominik's professional experience, 
+        skills, and interests, with a focus on his current roles in Machine Learning Project Management and Logistics Planning. 
+        Feel free to ask me anything about his career, propose challenges, or inquire about 
+        specific skills in areas like machine learning, logistics optimization, or project management. 
+        What would you like to know?
+        """)
 
-    # Display profile picture if available
+        # Initialize chat history
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
+
+        # Display chat messages from history on rerun
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
+    # Input container
+    input_container = st.container()
+    
+    with input_container:
+        # React to user input
+        if prompt := st.chat_input("What would you like to know or discuss?"):
+            # Display user message in chat message container
+            with chat_container:
+                st.chat_message("user").markdown(prompt)
+            # Add user message to chat history
+            st.session_state.messages.append({"role": "user", "content": prompt})
+
+            with chat_container:
+                with st.chat_message("assistant"):
+                    response = get_interactive_cv_response(prompt, st.session_state.messages)
+                    st.markdown(response)
+            
+            # Add assistant response to chat history
+            st.session_state.messages.append({"role": "assistant", "content": response})
+
+    # Sidebar content
     profile_pic_base64 = get_image_base64("dominik_profile.jpg")
     if profile_pic_base64:
         st.sidebar.markdown(
@@ -210,29 +272,6 @@ with tab1:
     st.sidebar.write("Dominik Späth")
     st.sidebar.write("Born: March 30, 1998")
     st.sidebar.write("Email: dominik_justin@outlook.de")
-
-    # Initialize chat history
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-
-    # Display chat messages from history on rerun
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-
-    # React to user input
-    if prompt := st.chat_input("What would you like to know or discuss?"):
-        # Display user message in chat message container
-        st.chat_message("user").markdown(prompt)
-        # Add user message to chat history
-        st.session_state.messages.append({"role": "user", "content": prompt})
-
-        with st.chat_message("assistant"):
-            response = get_interactive_cv_response(prompt, st.session_state.messages)
-            st.markdown(response)
-        
-        # Add assistant response to chat history
-        st.session_state.messages.append({"role": "assistant", "content": response})
 
 with tab2:
     st.header("Contact Dominik")
@@ -262,4 +301,3 @@ st.sidebar.info(
 st.sidebar.warning(
     "Note: This is a demo application. For the most accurate and current information about Dominik's experience, please contact him directly."
 )
-
